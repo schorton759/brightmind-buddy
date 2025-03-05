@@ -65,11 +65,13 @@ const SignUpForm = ({ onSubmit, isLoading }: SignUpFormProps) => {
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="sign-up-username">Username</Label>
+        <Label htmlFor="sign-up-username">
+          {userType === 'parent' ? 'Full Name' : 'Username'}
+        </Label>
         <Input 
           id="sign-up-username"
           type="text"
-          placeholder="Choose a username"
+          placeholder={userType === 'parent' ? "Enter your full name" : "Choose a username"}
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           required
@@ -102,6 +104,11 @@ const SignUpForm = ({ onSubmit, isLoading }: SignUpFormProps) => {
             <SelectItem value="parent">Parent</SelectItem>
           </SelectContent>
         </Select>
+        {userType === 'parent' && (
+          <p className="text-xs text-muted-foreground mt-1">
+            Parents can create and manage child accounts
+          </p>
+        )}
       </div>
       
       {userType === 'child' && (

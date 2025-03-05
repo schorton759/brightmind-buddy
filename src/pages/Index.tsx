@@ -11,6 +11,7 @@ import { useCoachTip } from '@/hooks/use-coach-tip';
 import UserAgeSelector from '@/components/UserAgeSelector';
 import PageHeader from '@/components/PageHeader';
 import PageFooter from '@/components/PageFooter';
+import ParentDashboard from '@/components/parent/ParentDashboard';
 
 // Define the age group type to match Supabase's type
 type AgeGroup = '8-10' | '10-12' | '13-15' | '15+';
@@ -29,13 +30,15 @@ const Index = () => {
     
     if (!authLoading) {
       if (profile) {
-        if (profile.user_type === 'child' && profile.age_group) {
+        // Show parent dashboard if user is a parent
+        if (profile.user_type === 'parent') {
+          setCurrentView('parent-dashboard');
+        }
+        // For children, show appropriate view
+        else if (profile.user_type === 'child' && profile.age_group) {
           setCurrentView('dashboard');
         } else if (profile.user_type === 'child' && !profile.age_group) {
           setCurrentView('age-select');
-        } else {
-          // Parent view
-          setCurrentView('dashboard');
         }
       } else {
         // If profile is null but user exists, we need to select age group
@@ -54,7 +57,12 @@ const Index = () => {
   };
   
   const handleBack = () => {
-    setCurrentView('dashboard');
+    // For parents, always go back to parent dashboard
+    if (profile?.user_type === 'parent') {
+      setCurrentView('parent-dashboard');
+    } else {
+      setCurrentView('dashboard');
+    }
   };
 
   // Loading state
@@ -80,6 +88,18 @@ const Index = () => {
         <AnimatePresence mode="wait">
           {currentView === 'age-select' && (
             <UserAgeSelector onSelectComplete={() => setCurrentView('dashboard')} />
+          )}
+          
+          {currentView === 'parent-dashboard' && (
+            <motion.div
+              key="parent-dashboard"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.4 }}
+            >
+              <ParentDashboard />
+            </motion.div>
           )}
           
           {currentView === 'dashboard' && (
@@ -136,7 +156,9 @@ const Index = () => {
         </AnimatePresence>
       </main>
       
-      <PageFooter coachTip={coachTip} />
+      {currentView !== 'parent-dashboard' && (
+        <PageFooter coachTip={coachTip} />
+      )}
     </div>
   );
 };
