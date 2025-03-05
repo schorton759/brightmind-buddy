@@ -75,8 +75,8 @@ const Index = () => {
   };
   
   const handleBack = () => {
-    // For parents, always go back to parent dashboard
-    if (profile?.user_type === 'parent') {
+    // Always respect the user type when navigating back
+    if (profile?.user_type === 'parent' || user?.user_metadata?.user_type === 'parent') {
       setCurrentView('parent-dashboard');
     } else {
       setCurrentView('dashboard');

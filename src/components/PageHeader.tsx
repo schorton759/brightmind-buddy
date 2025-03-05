@@ -14,6 +14,14 @@ type PageHeaderProps = {
 };
 
 const PageHeader = ({ currentView, profile, onBack, onChangeAgeGroup }: PageHeaderProps) => {
+  // Determine if back button should be shown
+  const showBackButton = currentView !== 'parent-dashboard' && currentView !== 'age-select';
+  
+  // Only show age group change button for child accounts on dashboard
+  const showAgeGroupButton = profile?.user_type === 'child' && 
+                            currentView !== 'age-select' && 
+                            currentView === 'dashboard';
+  
   return (
     <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b p-4">
       <div className="max-w-7xl mx-auto flex justify-between items-center">
@@ -23,7 +31,7 @@ const PageHeader = ({ currentView, profile, onBack, onChangeAgeGroup }: PageHead
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5 }}
         >
-          {currentView !== 'age-select' && (
+          {showBackButton && (
             <Button variant="ghost" size="icon" onClick={onBack} className="mr-2">
               <ChevronLeft className="h-5 w-5" />
             </Button>
@@ -39,7 +47,7 @@ const PageHeader = ({ currentView, profile, onBack, onChangeAgeGroup }: PageHead
           transition={{ delay: 0.3 }}
           className="flex items-center space-x-4"
         >
-          {profile?.user_type === 'child' && currentView !== 'age-select' && (
+          {showAgeGroupButton && (
             <Button 
               variant="outline" 
               size="sm" 

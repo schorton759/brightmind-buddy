@@ -19,6 +19,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Wrap the updateProfile function to match the expected return type
   const updateProfile = async (updates: Partial<Profile>): Promise<void> => {
     await rawUpdateProfile(updates);
+    return;
   };
 
   useEffect(() => {

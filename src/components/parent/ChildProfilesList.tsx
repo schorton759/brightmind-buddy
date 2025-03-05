@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { 
@@ -47,7 +46,7 @@ const ChildProfilesList = ({ refreshTrigger, onCreateCredentials }: {
   const [credentials, setCredentials] = useState<ChildCredentials | null>(null);
   const [creatingCredentials, setCreatingCredentials] = useState(false);
   const { toast } = useToast();
-  const { user, signUp, signIn, signOut, updateProfile } = useAuth();
+  const { user, createChildCredentials } = useAuth();
   
   useEffect(() => {
     fetchChildProfiles();
@@ -95,32 +94,21 @@ const ChildProfilesList = ({ refreshTrigger, onCreateCredentials }: {
       setSelectedChild(child);
       setCreatingCredentials(true);
       
-      // Call the function through Supabase Functions API
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-child-credentials`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-        },
-        body: JSON.stringify({
-          childId: child.id,
-          username: child.username,
-          ageGroup: child.age_group
-        })
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create credentials');
+      if (!createChildCredentials) {
+        throw new Error("Create credentials function not available");
       }
       
-      const { credentials: resultCredentials } = await response.json();
+      const result = await createChildCredentials(
+        child.id, 
+        child.username, 
+        child.age_group
+      );
       
       // Store the credentials to show to the parent
       setCredentials({
-        email: resultCredentials.email,
-        password: resultCredentials.password,
-        username: resultCredentials.username
+        email: result.credentials.email,
+        password: result.credentials.password,
+        username: result.credentials.username
       });
       
       setShowCredentialsDialog(true);

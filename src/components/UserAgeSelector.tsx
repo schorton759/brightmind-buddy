@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import AgeGroupSelector from '@/components/AgeGroupSelector';
@@ -26,6 +27,11 @@ const UserAgeSelector = ({ onSelectComplete }: { onSelectComplete: () => void })
       
       // Transition to dashboard
       onSelectComplete();
+
+      toast({
+        title: "Age group updated",
+        description: "Your age group has been updated successfully.",
+      });
     } catch (error: any) {
       console.error('Failed to update age group:', error);
       toast({
