@@ -20,6 +20,11 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
     
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error("Missing environment variables: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+      throw new Error("Server configuration error");
+    }
+    
     // This client will bypass RLS
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     
@@ -48,11 +53,15 @@ serve(async (req) => {
         user_type: 'child',
         age_group,
       })
-      .select('*');
+      .select('*')
+      .single();
       
     if (profileError) {
       console.error('Error creating child profile:', profileError);
-      throw new Error(`Failed to create child profile: ${profileError.message}`);
+      return new Response(
+        JSON.stringify({ error: `Failed to create child profile: ${profileError.message}` }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
     
     console.log('Child profile created successfully:', childProfileData);
@@ -67,7 +76,10 @@ serve(async (req) => {
       
     if (connectionError) {
       console.error('Error creating family connection:', connectionError);
-      throw new Error(`Failed to create family connection: ${connectionError.message}`);
+      return new Response(
+        JSON.stringify({ error: `Failed to create family connection: ${connectionError.message}` }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
     
     console.log('Family connection created successfully');
@@ -75,7 +87,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        childProfile: childProfileData?.[0] || null 
+        childProfile: childProfileData || null 
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

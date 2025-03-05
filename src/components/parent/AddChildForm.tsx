@@ -79,7 +79,7 @@ const AddChildForm = ({ onComplete }: AddChildFormProps) => {
         throw new Error(`Failed to create child profile: ${error.message}`);
       }
       
-      if (data.error) {
+      if (data && data.error) {
         console.error('Edge function returned error:', data.error);
         throw new Error(`Failed to create child profile: ${data.error}`);
       }
