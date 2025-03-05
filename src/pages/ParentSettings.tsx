@@ -225,6 +225,7 @@ const ParentSettings = () => {
         currentView="settings" 
         profile={profile}
         onBack={() => navigate('/')}
+        onChangeAgeGroup={() => {}} // Not applicable for parent users
       />
       
       <main className="max-w-4xl mx-auto py-8 px-4">

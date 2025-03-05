@@ -9,7 +9,11 @@ import { LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AgeGroup } from '@/types/auth';
 
-const UserAgeSelector = ({ onSelectComplete }: { onSelectComplete: () => void }) => {
+interface UserAgeSelectorProps {
+  onSelectComplete: () => void;
+}
+
+const UserAgeSelector = ({ onSelectComplete }: UserAgeSelectorProps) => {
   const { profile, updateProfile, user, signOut } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -24,6 +28,9 @@ const UserAgeSelector = ({ onSelectComplete }: { onSelectComplete: () => void })
       console.log(`Updating age group to ${group} for user ID: ${user.id}`);
       
       await updateProfile({ age_group: group as AgeGroup });
+      
+      // Store age group in localStorage for tutor components to use
+      localStorage.setItem('user_age_group', group);
       
       // Transition to dashboard
       onSelectComplete();

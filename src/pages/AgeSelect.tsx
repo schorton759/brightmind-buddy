@@ -18,10 +18,12 @@ const AgeSelect = () => {
       <PageHeader 
         currentView="age-select" 
         profile={profile}
+        onBack={() => {}} // No back functionality needed on age select page
+        onChangeAgeGroup={() => {}} // Not applicable on age select page
       />
       
       <main className="max-w-md mx-auto py-8 px-4">
-        <UserAgeSelector onComplete={handleAgeSelection} />
+        <UserAgeSelector onSelectComplete={handleAgeSelection} />
       </main>
     </div>
   );

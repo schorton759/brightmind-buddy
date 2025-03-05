@@ -15,6 +15,7 @@ const Profile = () => {
         currentView="profile" 
         profile={profile}
         onBack={() => navigate('/')}
+        onChangeAgeGroup={() => navigate('/age-select')}
       />
       
       <main className="max-w-4xl mx-auto py-8 px-4">

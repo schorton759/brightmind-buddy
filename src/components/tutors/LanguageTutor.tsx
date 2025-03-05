@@ -1,6 +1,6 @@
 
 import React from 'react';
-import TutorChat from './TutorChat';
+import { TutorChat } from './TutorChat';
 
 const LanguageTutor: React.FC = () => {
   return (
@@ -14,10 +14,7 @@ const LanguageTutor: React.FC = () => {
       
       <TutorChat 
         subject="language"
-        tutorName="Ms. Wordsmith"
-        tutorAvatar="/tutors/language-tutor.png"
-        tutorIntro="Hi there! I'm Ms. Wordsmith, your language tutor. I'm here to help you with reading, 
-        writing, vocabulary, grammar, and more. What would you like help with today?"
+        ageGroup={localStorage.getItem('user_age_group') || '13-15'}
       />
     </div>
   );
