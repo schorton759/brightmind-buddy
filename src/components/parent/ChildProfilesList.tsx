@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { 
@@ -18,7 +19,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Key, Trash2, User } from 'lucide-react';
+import { Copy, Info, Key, Trash2, User } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useAuth } from '@/context/AuthContext';
@@ -27,6 +28,11 @@ type ChildProfile = {
   id: string;
   username: string;
   age_group: string | null;
+  credentials?: {
+    email: string;
+    password: string;
+    username: string;
+  } | null;
 };
 
 type ChildCredentials = {
@@ -105,11 +111,22 @@ const ChildProfilesList = ({ refreshTrigger, onCreateCredentials }: {
       );
       
       // Store the credentials to show to the parent
-      setCredentials({
+      const newCredentials = {
         email: result.credentials.email,
         password: result.credentials.password,
         username: result.credentials.username
-      });
+      };
+      
+      setCredentials(newCredentials);
+      
+      // Update the child profile with credentials
+      setChildProfiles(prev => 
+        prev.map(p => 
+          p.id === child.id 
+            ? { ...p, credentials: newCredentials } 
+            : p
+        )
+      );
       
       setShowCredentialsDialog(true);
       
@@ -127,6 +144,14 @@ const ChildProfilesList = ({ refreshTrigger, onCreateCredentials }: {
     } finally {
       setCreatingCredentials(false);
     }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copied to clipboard",
+      description: "The text has been copied to your clipboard."
+    });
   };
 
   const handleDeleteChild = async (childId: string) => {
@@ -197,10 +222,65 @@ const ChildProfilesList = ({ refreshTrigger, onCreateCredentials }: {
             <CardTitle className="text-lg">{child.username}</CardTitle>
           </CardHeader>
           <CardContent className="pb-2">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col space-y-3">
               <Badge variant="outline">
                 {child.age_group ? `Age: ${child.age_group}` : 'Age not set'}
               </Badge>
+              
+              {child.credentials && (
+                <div className="mt-3 bg-secondary/50 p-3 rounded-md space-y-2 text-sm">
+                  <h4 className="font-semibold flex items-center gap-1">
+                    <Info className="h-4 w-4" />
+                    Login Details
+                  </h4>
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium">Username:</span>
+                      <div className="flex items-center">
+                        <span className="font-mono">{child.credentials.username}</span>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6 ml-1"
+                          onClick={() => copyToClipboard(child.credentials.username)}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium">Email:</span>
+                      <div className="flex items-center">
+                        <span className="font-mono">{child.credentials.email}</span>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6 ml-1"
+                          onClick={() => copyToClipboard(child.credentials.email)}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium">Password:</span>
+                      <div className="flex items-center">
+                        <span className="font-mono">{child.credentials.password}</span>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6 ml-1"
+                          onClick={() => copyToClipboard(child.credentials.password)}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
           <CardFooter className="flex justify-end gap-2">
@@ -231,15 +311,29 @@ const ChildProfilesList = ({ refreshTrigger, onCreateCredentials }: {
               </AlertDialogContent>
             </AlertDialog>
             
-            <Button 
-              onClick={() => handleCreateCredentials(child)}
-              disabled={creatingCredentials && selectedChild?.id === child.id}
-            >
-              <Key className="h-4 w-4 mr-2" />
-              {creatingCredentials && selectedChild?.id === child.id 
-                ? 'Creating...' 
-                : 'Create Login'}
-            </Button>
+            {!child.credentials ? (
+              <Button 
+                onClick={() => handleCreateCredentials(child)}
+                disabled={creatingCredentials && selectedChild?.id === child.id}
+              >
+                <Key className="h-4 w-4 mr-2" />
+                {creatingCredentials && selectedChild?.id === child.id 
+                  ? 'Creating...' 
+                  : 'Create Login'}
+              </Button>
+            ) : (
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setSelectedChild(child);
+                  setCredentials(child.credentials || null);
+                  setShowCredentialsDialog(true);
+                }}
+              >
+                <Key className="h-4 w-4 mr-2" />
+                View Login
+              </Button>
+            )}
           </CardFooter>
         </Card>
       ))}
@@ -255,15 +349,48 @@ const ChildProfilesList = ({ refreshTrigger, onCreateCredentials }: {
           </DialogHeader>
           
           {credentials && (
-            <div className="bg-secondary p-4 rounded-md space-y-2 font-mono text-sm">
-              <div>
-                <span className="font-semibold">Username:</span> {credentials.username}
+            <div className="bg-secondary p-4 rounded-md space-y-3 font-mono text-sm">
+              <div className="flex justify-between items-center">
+                <span className="font-semibold">Username:</span>
+                <div className="flex items-center">
+                  <span>{credentials.username}</span>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-7 w-7 ml-1"
+                    onClick={() => copyToClipboard(credentials.username)}
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </div>
-              <div>
-                <span className="font-semibold">Email:</span> {credentials.email}
+              <div className="flex justify-between items-center">
+                <span className="font-semibold">Email:</span>
+                <div className="flex items-center">
+                  <span>{credentials.email}</span>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-7 w-7 ml-1"
+                    onClick={() => copyToClipboard(credentials.email)}
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </div>
-              <div>
-                <span className="font-semibold">Password:</span> {credentials.password}
+              <div className="flex justify-between items-center">
+                <span className="font-semibold">Password:</span>
+                <div className="flex items-center">
+                  <span>{credentials.password}</span>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-7 w-7 ml-1"
+                    onClick={() => copyToClipboard(credentials.password)}
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </div>
             </div>
           )}
