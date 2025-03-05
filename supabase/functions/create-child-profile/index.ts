@@ -108,51 +108,67 @@ serve(async (req) => {
     // Wait a moment to ensure the database trigger has time to create the profile
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // The profile should be created automatically via trigger, but let's verify it exists
-    const { data: profileData, error: profileCheckError } = await supabaseAdmin
-      .from('profiles')
-      .select('*')
-      .eq('id', childId)
-      .single();
-      
-    if (profileCheckError) {
-      console.error('Error verifying profile:', profileCheckError);
-      return new Response(
-        JSON.stringify({ error: `Failed to verify profile: ${profileCheckError.message}` }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-    
-    let finalProfileData = profileData;
-    
-    if (!profileData) {
-      console.error('Profile not created automatically, attempting manual creation');
-      
-      // If the profile doesn't exist for some reason, create it manually
-      const { data: manualProfileData, error: manualProfileError } = await supabaseAdmin
+    // Explicit profile creation - we'll do this regardless of whether the trigger worked
+    console.log("Explicitly creating profile for new user:", childId);
+    try {
+      const { data: profileData, error: profileError } = await supabaseAdmin
         .from('profiles')
         .insert({
           id: childId,
           username,
           user_type: 'child',
-          age_group,
+          age_group
         })
         .select('*')
         .single();
         
-      if (manualProfileError) {
-        console.error('Error creating profile manually:', manualProfileError);
+      if (profileError) {
+        if (profileError.code === '23505') { // Duplicate key value violates unique constraint
+          console.log('Profile already exists, this is likely due to the trigger. Proceeding...');
+        } else {
+          console.error('Error creating profile:', profileError);
+          throw new Error(profileError.message);
+        }
+      } else {
+        console.log('Profile created successfully:', profileData);
+      }
+    } catch (error) {
+      // If there's an error but it's a duplicate key, we can proceed
+      if (error.message && error.message.includes('duplicate key')) {
+        console.log('Profile already exists due to trigger. Continuing to create family connection.');
+      } else {
+        console.error('Error in profile creation:', error.message);
         return new Response(
-          JSON.stringify({ error: `Failed to create profile: ${manualProfileError.message}` }),
+          JSON.stringify({ error: `Failed to create profile: ${error.message}` }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      
-      finalProfileData = manualProfileData;
-      console.log('Profile created manually:', manualProfileData);
-    } else {
-      console.log('Profile created automatically:', profileData);
     }
+    
+    // Fetch the profile (either created by trigger or explicitly by us)
+    const { data: fetchedProfile, error: fetchError } = await supabaseAdmin
+      .from('profiles')
+      .select('*')
+      .eq('id', childId)
+      .single();
+      
+    if (fetchError) {
+      console.error('Error fetching profile:', fetchError);
+      return new Response(
+        JSON.stringify({ error: `Failed to verify profile: ${fetchError.message}` }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    if (!fetchedProfile) {
+      console.error('Could not find profile after creation');
+      return new Response(
+        JSON.stringify({ error: "Profile creation verified but profile not found" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    console.log('Profile verified:', fetchedProfile);
     
     // Create the family connection with better error handling
     try {
@@ -179,7 +195,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        childProfile: finalProfileData || null 
+        childProfile: fetchedProfile || null 
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
