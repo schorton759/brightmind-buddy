@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Dashboard from '@/components/Dashboard';
@@ -12,8 +11,10 @@ import UserAgeSelector from '@/components/UserAgeSelector';
 import PageHeader from '@/components/PageHeader';
 import PageFooter from '@/components/PageFooter';
 import ParentDashboard from '@/components/parent/ParentDashboard';
+import TutorsHub from '@/components/tutors/TutorsHub';
+import MathTutor from '@/components/tutors/MathTutor';
+import LanguageTutor from '@/components/tutors/LanguageTutor';
 
-// Define the age group type to match Supabase's type
 type AgeGroup = '8-10' | '10-12' | '13-15' | '15+';
 
 const Index = () => {
@@ -31,22 +32,17 @@ const Index = () => {
     
     if (!authLoading) {
       if (!user) {
-        // This shouldn't happen due to ProtectedRoute, but just in case
         navigate('/auth');
         return;
       }
       
-      // First check if user is a parent based on metadata - this takes precedence
       const userType = user.user_metadata?.user_type;
       
       if (userType === 'parent') {
-        // If user metadata says this is a parent, go directly to parent dashboard
-        console.log("User is a parent based on metadata - showing parent dashboard");
         setCurrentView('parent-dashboard');
         return;
       }
       
-      // Then check profile if we have one
       if (profile) {
         console.log("Using profile data for routing, user_type:", profile.user_type);
         if (profile.user_type === 'parent') {
@@ -59,11 +55,9 @@ const Index = () => {
           }
         }
       } else if (userType === 'child') {
-        // If no profile but metadata says it's a child
         console.log("User is a child based on metadata - showing age selection");
         setCurrentView('age-select');
       } else {
-        // Fallback when we have no way to determine user type
         console.log("No profile or metadata user type - defaulting to age selection");
         setCurrentView('age-select');
       }
@@ -75,7 +69,6 @@ const Index = () => {
   };
   
   const handleBack = () => {
-    // Always respect the user type when navigating back
     if (profile?.user_type === 'parent' || user?.user_metadata?.user_type === 'parent') {
       setCurrentView('parent-dashboard');
     } else {
@@ -83,7 +76,6 @@ const Index = () => {
     }
   };
 
-  // Loading state
   if (currentView === 'loading' || authLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
@@ -169,6 +161,42 @@ const Index = () => {
               transition={{ duration: 0.4 }}
             >
               <TaskManager />
+            </motion.div>
+          )}
+          
+          {currentView === 'tutors' && (
+            <motion.div
+              key="tutors"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.4 }}
+            >
+              <TutorsHub />
+            </motion.div>
+          )}
+          
+          {currentView === 'math-tutor' && (
+            <motion.div
+              key="math-tutor"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.4 }}
+            >
+              <MathTutor />
+            </motion.div>
+          )}
+          
+          {currentView === 'language-tutor' && (
+            <motion.div
+              key="language-tutor"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.4 }}
+            >
+              <LanguageTutor />
             </motion.div>
           )}
         </AnimatePresence>

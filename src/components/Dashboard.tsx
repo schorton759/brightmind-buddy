@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { motion } from 'framer-motion';
 import { 
@@ -9,7 +8,9 @@ import {
   Award, 
   Users, 
   Settings,
-  Sparkles
+  Sparkles,
+  BarChart,
+  Pencil
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -116,6 +117,23 @@ const Dashboard = ({ ageGroup, username, onNavigate }: DashboardProps) => {
           Small, consistent actions lead to big results. Try to complete at least one habit today!
         </p>
       </motion.div>
+
+      <Card 
+        className="hover:border-primary cursor-pointer transition-all"
+        onClick={() => onNavigate('tutors')}
+      >
+        <CardHeader className="p-4">
+          <div className="flex items-center space-x-3">
+            <div className="bg-primary/10 p-2 rounded-md">
+              <BookOpen className="h-6 w-6 text-primary" />
+            </div>
+            <CardTitle className="text-lg">Learning Tutors</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="px-4 pb-4 pt-0">
+          <CardDescription>Get help from our AI tutors in math and language skills</CardDescription>
+        </CardContent>
+      </Card>
     </div>
   );
 };
