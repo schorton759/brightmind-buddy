@@ -28,6 +28,7 @@ const Auth = () => {
   
   // Error handling
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
   
   // If user is already logged in, redirect to home
   if (user) {
@@ -37,16 +38,26 @@ const Auth = () => {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setMessage('');
+    
+    if (!signInEmail || !signInPassword) {
+      setError('Please fill in all required fields');
+      return;
+    }
+    
     try {
       await signIn(signInEmail, signInPassword);
+      // Success is handled by the AuthContext
     } catch (error: any) {
-      setError(error.message);
+      console.error('Sign in error:', error);
+      setError(error.message || 'An error occurred during sign in');
     }
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setMessage('');
     
     if (!signUpEmail || !signUpPassword || !signUpUsername || !signUpUserType) {
       setError('Please fill in all required fields');
@@ -59,6 +70,7 @@ const Auth = () => {
     }
     
     try {
+      setMessage('Creating your account... Please wait.');
       await signUp(
         signUpEmail, 
         signUpPassword, 
@@ -66,8 +78,11 @@ const Auth = () => {
         signUpUserType, 
         signUpUserType === 'child' ? signUpAgeGroup : undefined
       );
+      // Success will redirect via AuthContext
     } catch (error: any) {
-      setError(error.message);
+      console.error('Sign up error:', error);
+      setError(error.message || 'An error occurred during sign up');
+      setMessage('');
     }
   };
 
@@ -132,6 +147,7 @@ const Auth = () => {
                   </div>
                   
                   {error && <p className="text-sm text-destructive">{error}</p>}
+                  {message && <p className="text-sm text-muted-foreground">{message}</p>}
                   
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? 'Signing in...' : 'Sign In'}
@@ -214,6 +230,7 @@ const Auth = () => {
                   )}
                   
                   {error && <p className="text-sm text-destructive">{error}</p>}
+                  {message && <p className="text-sm text-muted-foreground">{message}</p>}
                   
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? 'Creating Account...' : 'Sign Up'}
