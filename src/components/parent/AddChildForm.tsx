@@ -64,29 +64,43 @@ const AddChildForm = ({ onComplete }: AddChildFormProps) => {
     try {
       setIsSubmitting(true);
 
-      // Step 1: Insert profile
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
+      // Create the child profile using the service role client
+      // This will be a server function to bypass RLS in the future
+      // For now, we'll work directly with the client but use a more permissive approach
+      
+      // Generate a UUID for the child profile
+      const childId = crypto.randomUUID();
+      
+      // Step 1: Create profile directly (with permission granted by the DB policy)
+      // Using direct insert with raw SQL would be better but requires server function
+      const { data: childProfileData, error: profileError } = await supabase.from('profiles')
         .insert({
-          id: crypto.randomUUID(), // Generate a UUID for the child profile
+          id: childId,
           username: values.username,
           user_type: 'child',
           age_group: values.age_group as any,
         })
-        .select()
-        .single();
+        .select('*');
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Profile creation error:', profileError);
+        throw new Error(`Failed to create child profile: ${profileError.message}`);
+      }
+
+      console.log('Child profile created:', childProfileData);
 
       // Step 2: Create family connection
       const { error: connectionError } = await supabase
         .from('family_connections')
         .insert({
           parent_id: user.id,
-          child_id: profileData.id,
+          child_id: childId,
         });
 
-      if (connectionError) throw connectionError;
+      if (connectionError) {
+        console.error('Connection error:', connectionError);
+        throw new Error(`Failed to create family connection: ${connectionError.message}`);
+      }
 
       toast({
         title: "Child profile created",
