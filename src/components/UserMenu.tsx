@@ -14,8 +14,13 @@ import { Settings, LogOut, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export function UserMenu() {
-  const { profile, signOut } = useAuth();
+  const { profile, user, signOut } = useAuth();
   const navigate = useNavigate();
+
+  // Determine user type from either metadata or profile
+  const isParent = 
+    user?.user_metadata?.user_type === 'parent' || 
+    profile?.user_type === 'parent';
 
   const handleSignOut = async () => {
     await signOut();
@@ -23,7 +28,7 @@ export function UserMenu() {
   };
 
   const handleSettings = () => {
-    if (profile?.user_type === 'parent') {
+    if (isParent) {
       navigate('/parent-settings');
     } else {
       navigate('/profile');
@@ -42,7 +47,7 @@ export function UserMenu() {
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">{profile?.username}</p>
             <p className="text-xs leading-none text-muted-foreground">
-              {profile?.user_type === 'child' ? 'Child Account' : 'Parent Account'}
+              {isParent ? 'Parent Account' : 'Child Account'}
             </p>
           </div>
         </DropdownMenuLabel>
