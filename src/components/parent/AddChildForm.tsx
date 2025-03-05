@@ -91,6 +91,10 @@ const AddChildForm = ({ onComplete }: AddChildFormProps) => {
         throw new Error(`Failed to create child profile: ${data.error}`);
       }
       
+      if (!data || !data.success) {
+        throw new Error('Edge function did not return success status');
+      }
+      
       console.log('Child profile created successfully:', data);
 
       toast({
@@ -100,7 +104,8 @@ const AddChildForm = ({ onComplete }: AddChildFormProps) => {
 
       onComplete();
     } catch (error: any) {
-      console.error('Error creating child profile:', error.message);
+      console.error('Error creating child profile:', error);
+      
       toast({
         variant: "destructive",
         title: "Failed to create child profile",

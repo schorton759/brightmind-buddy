@@ -66,28 +66,47 @@ serve(async (req) => {
     
     console.log(`Creating temporary auth user with email: ${tempEmail}`);
     
-    // Create the auth user
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: tempEmail,
-      password: tempPassword,
-      email_confirm: true, // Auto-confirm the email
-      user_metadata: {
-        username,
-        user_type: 'child',
-        age_group
+    // Create the auth user with more detailed error handling
+    let authData;
+    try {
+      const { data, error } = await supabaseAdmin.auth.admin.createUser({
+        email: tempEmail,
+        password: tempPassword,
+        email_confirm: true, // Auto-confirm the email
+        user_metadata: {
+          username,
+          user_type: 'child',
+          age_group
+        }
+      });
+      
+      if (error) {
+        throw new Error(error.message);
       }
-    });
-    
-    if (authError) {
-      console.error('Error creating auth user:', authError);
+      
+      authData = data;
+      console.log("Auth user created successfully:", authData);
+    } catch (error) {
+      console.error('Error creating auth user:', error.message);
       return new Response(
-        JSON.stringify({ error: `Failed to create auth user: ${authError.message}` }),
+        JSON.stringify({ error: `Failed to create auth user: ${error.message}` }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    if (!authData || !authData.user || !authData.user.id) {
+      console.error('Auth user data is incomplete or missing');
+      return new Response(
+        JSON.stringify({ error: "Failed to create auth user: User data is incomplete" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
     
     const childId = authData.user.id;
     console.log(`Auth user created with ID: ${childId}`);
+    
+    // Wait a moment to ensure the database trigger has time to create the profile
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
     // The profile should be created automatically via trigger, but let's verify it exists
     const { data: profileData, error: profileCheckError } = await supabaseAdmin
@@ -103,6 +122,8 @@ serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+    
+    let finalProfileData = profileData;
     
     if (!profileData) {
       console.error('Profile not created automatically, attempting manual creation');
@@ -127,33 +148,38 @@ serve(async (req) => {
         );
       }
       
+      finalProfileData = manualProfileData;
       console.log('Profile created manually:', manualProfileData);
     } else {
       console.log('Profile created automatically:', profileData);
     }
     
-    // Create the family connection
-    const { error: connectionError } = await supabaseAdmin
-      .from('family_connections')
-      .insert({
-        parent_id,
-        child_id: childId,
-      });
+    // Create the family connection with better error handling
+    try {
+      const { error } = await supabaseAdmin
+        .from('family_connections')
+        .insert({
+          parent_id,
+          child_id: childId,
+        });
+        
+      if (error) {
+        throw new Error(error.message);
+      }
       
-    if (connectionError) {
-      console.error('Error creating family connection:', connectionError);
+      console.log('Family connection created successfully');
+    } catch (error) {
+      console.error('Error creating family connection:', error);
       return new Response(
-        JSON.stringify({ error: `Failed to create family connection: ${connectionError.message}` }),
+        JSON.stringify({ error: `Failed to create family connection: ${error.message}` }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
     
-    console.log('Family connection created successfully');
-    
     return new Response(
       JSON.stringify({ 
         success: true, 
-        childProfile: profileData || null 
+        childProfile: finalProfileData || null 
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
