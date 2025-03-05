@@ -56,7 +56,7 @@ const Dashboard = ({ ageGroup, username, onNavigate }: DashboardProps) => {
     }
   };
 
-  const item = {
+  const itemAnimation = {
     hidden: { opacity: 0, y: 20 },
     show: { opacity: 1, y: 0 }
   };
@@ -82,22 +82,22 @@ const Dashboard = ({ ageGroup, username, onNavigate }: DashboardProps) => {
         initial="hidden"
         animate="show"
       >
-        {menuItems.map((item) => (
-          <motion.div key={item.id} variants={item}>
+        {menuItems.map((menuItem) => (
+          <motion.div key={menuItem.id} variants={itemAnimation}>
             <Button
               variant="outline"
-              onClick={() => !item.disabled && onNavigate(item.id)}
+              onClick={() => !menuItem.disabled && onNavigate(menuItem.id)}
               className={cn(
                 "w-full h-32 flex flex-col items-center justify-center gap-3 rounded-xl border",
                 "transition-all duration-300 card-hover",
-                item.disabled ? "opacity-60 cursor-not-allowed" : "",
-                item.color
+                menuItem.disabled ? "opacity-60 cursor-not-allowed" : "",
+                menuItem.color
               )}
-              disabled={item.disabled}
+              disabled={menuItem.disabled}
             >
-              <div className="text-2xl">{item.icon}</div>
-              <span className="font-medium">{item.label}</span>
-              {item.disabled && (
+              <div className="text-2xl">{menuItem.icon}</div>
+              <span className="font-medium">{menuItem.label}</span>
+              {menuItem.disabled && (
                 <span className="text-xs">Coming soon</span>
               )}
             </Button>
