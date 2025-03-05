@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AgeGroupSelector from '@/components/AgeGroupSelector';
@@ -100,8 +101,27 @@ const Index = () => {
         description: "Your profile has been updated successfully.",
       });
       
-      // Reload the page to refresh the profile data
-      window.location.reload();
+      // Fetch the updated profile instead of reloading the page
+      const { data: updatedProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+        
+      if (profileError) {
+        console.error('Error fetching updated profile:', profileError);
+      } else if (updatedProfile) {
+        // Update local state with new profile data
+        console.log("Updated profile:", updatedProfile);
+        
+        // Set view to dashboard
+        setCurrentView('dashboard');
+        
+        // Fetch coach tip for the new age group
+        if (updatedProfile.age_group) {
+          fetchCoachTip(updatedProfile.age_group as AgeGroup);
+        }
+      }
     } catch (error: any) {
       console.error('Failed to update age group:', error);
       toast({

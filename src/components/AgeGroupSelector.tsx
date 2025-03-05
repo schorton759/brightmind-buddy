@@ -30,20 +30,7 @@ const AgeGroupSelector = ({
   const handleSelectGroup = (groupId: string) => {
     if (isLoading) return;
     
-    try {
-      onSelectGroup(groupId);
-      toast({
-        title: "Age group selected",
-        description: "Updating your profile...",
-      });
-    } catch (error) {
-      console.error('Error selecting age group:', error);
-      toast({
-        variant: "destructive",
-        title: "Failed to select age group",
-        description: "Please try again later.",
-      });
-    }
+    onSelectGroup(groupId);
   };
 
   return (
@@ -70,7 +57,7 @@ const AgeGroupSelector = ({
           >
             <h3 className="text-lg font-medium">{group.label}</h3>
             <p className="text-sm text-muted-foreground mt-1">{group.description}</p>
-            {isLoading && selectedGroup === group.id && (
+            {selectedGroup === group.id && isLoading && (
               <div className="mt-2 animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
             )}
           </motion.button>
