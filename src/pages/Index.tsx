@@ -29,28 +29,37 @@ const Index = () => {
     console.log("Index page - User state:", user);
     
     if (!authLoading) {
+      if (!user) {
+        // This shouldn't happen due to ProtectedRoute, but just in case
+        navigate('/auth');
+        return;
+      }
+      
+      // Check user metadata for user_type
+      const userType = user.user_metadata?.user_type;
+      
       if (profile) {
-        // Show parent dashboard if user is a parent
+        // If profile exists, use the user_type from profile
         if (profile.user_type === 'parent') {
           setCurrentView('parent-dashboard');
-        }
-        // For children, show appropriate view
-        else if (profile.user_type === 'child' && profile.age_group) {
-          setCurrentView('dashboard');
-        } else if (profile.user_type === 'child' && !profile.age_group) {
-          setCurrentView('age-select');
+        } else if (profile.user_type === 'child') {
+          if (profile.age_group) {
+            setCurrentView('dashboard');
+          } else {
+            setCurrentView('age-select');
+          }
         }
       } else {
-        // If profile is null but user exists, we need to select age group
-        if (user) {
-          setCurrentView('age-select');
+        // If no profile exists yet but we have user metadata, use that to determine the view
+        if (userType === 'parent') {
+          setCurrentView('parent-dashboard');
         } else {
-          // This shouldn't happen due to ProtectedRoute, but just in case
-          navigate('/auth');
+          // Default to age selection for child accounts
+          setCurrentView('age-select');
         }
       }
     }
-  }, [profile, authLoading, user]);
+  }, [profile, authLoading, user, navigate]);
   
   const handleNavigate = (page: string) => {
     setCurrentView(page);
