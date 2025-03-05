@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AgeGroupSelector from '@/components/AgeGroupSelector';
 import Dashboard from '@/components/Dashboard';
@@ -8,15 +8,79 @@ import JournalEntry from '@/components/JournalEntry';
 import TaskManager from '@/components/TaskManager';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { UserMenu } from '@/components/UserMenu';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const Index = () => {
-  const [currentView, setCurrentView] = useState<string>('age-select');
-  const [ageGroup, setAgeGroup] = useState<string>('');
-  const [username, setUsername] = useState<string>('Buddy');
+  const { profile, isLoading } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
   
-  const handleSelectAgeGroup = (group: string) => {
-    setAgeGroup(group);
-    setCurrentView('dashboard');
+  const [currentView, setCurrentView] = useState<string>('loading');
+  const [coachTip, setCoachTip] = useState<string>('');
+  
+  useEffect(() => {
+    if (!isLoading) {
+      if (profile) {
+        if (profile.user_type === 'child' && profile.age_group) {
+          setCurrentView('dashboard');
+          fetchCoachTip(profile.age_group);
+        } else if (profile.user_type === 'child' && !profile.age_group) {
+          setCurrentView('age-select');
+        } else {
+          // Parent view
+          setCurrentView('dashboard');
+        }
+      }
+    }
+  }, [profile, isLoading]);
+  
+  const fetchCoachTip = async (ageGroup: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('coach_tips')
+        .select('content')
+        .eq('age_group', ageGroup)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error) {
+        console.error('Error fetching coach tip:', error);
+        return;
+      }
+
+      if (data) {
+        setCoachTip(data.content);
+      }
+    } catch (error) {
+      console.error('Failed to fetch coach tip:', error);
+    }
+  };
+  
+  const handleSelectAgeGroup = async (group: string) => {
+    if (!profile) return;
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ age_group: group })
+        .eq('id', profile.id);
+        
+      if (error) throw error;
+      
+      // Force reload profile by refreshing the page
+      window.location.reload();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Failed to update age group",
+        description: error.message,
+      });
+    }
   };
   
   const handleNavigate = (page: string) => {
@@ -26,6 +90,15 @@ const Index = () => {
   const handleBack = () => {
     setCurrentView('dashboard');
   };
+
+  // Loading state
+  if (currentView === 'loading' || isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen bg-background">
@@ -51,10 +124,18 @@ const Index = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
+              className="flex items-center space-x-4"
             >
-              <Button variant="outline" size="sm" onClick={() => setCurrentView('age-select')}>
-                Change Age Group
-              </Button>
+              {profile?.user_type === 'child' && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setCurrentView('age-select')}
+                >
+                  Change Age Group
+                </Button>
+              )}
+              <UserMenu />
             </motion.div>
           )}
         </div>
@@ -87,7 +168,7 @@ const Index = () => {
               
               <div className="w-full">
                 <AgeGroupSelector 
-                  selectedGroup={ageGroup} 
+                  selectedGroup={profile?.age_group || ''} 
                   onSelectGroup={handleSelectAgeGroup} 
                 />
               </div>
@@ -103,8 +184,8 @@ const Index = () => {
               transition={{ duration: 0.4 }}
             >
               <Dashboard 
-                ageGroup={ageGroup} 
-                username={username} 
+                ageGroup={profile?.age_group || ''} 
+                username={profile?.username || 'Buddy'} 
                 onNavigate={handleNavigate} 
               />
             </motion.div>
@@ -130,7 +211,7 @@ const Index = () => {
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.4 }}
             >
-              <JournalEntry ageGroup={ageGroup} />
+              <JournalEntry ageGroup={profile?.age_group || ''} />
             </motion.div>
           )}
           
@@ -151,6 +232,9 @@ const Index = () => {
       <footer className="border-t mt-auto py-6">
         <div className="max-w-7xl mx-auto px-4 text-center text-sm text-muted-foreground">
           <p>BrightMind Buddy - Helping children build great habits</p>
+          {coachTip && (
+            <p className="mt-2 italic">"{coachTip}"</p>
+          )}
         </div>
       </footer>
     </div>
