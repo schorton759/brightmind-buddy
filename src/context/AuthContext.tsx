@@ -14,7 +14,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   
   const { profile, setProfile, fetchUserProfile, updateProfile } = useProfile(user, setIsLoading);
-  const { signUp, signIn, signOut } = useAuthOperations(setIsLoading);
+  const { signUp, signIn, signOut, createChildCredentials } = useAuthOperations(setIsLoading);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -53,6 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signIn,
         signOut,
         updateProfile,
+        createChildCredentials,
       }}
     >
       {children}

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -104,9 +103,48 @@ export const useAuthOperations = (setIsLoading: (value: boolean) => void) => {
     }
   };
 
+  const createChildCredentials = async (childId: string, username: string, ageGroup?: string | null) => {
+    try {
+      setIsLoading(true);
+      console.log("Creating credentials for child:", { childId, username, ageGroup });
+      
+      const { data, error } = await supabase.functions.invoke('create-child-credentials', {
+        body: {
+          childId,
+          username,
+          ageGroup
+        }
+      });
+
+      if (error) {
+        console.error("Error creating child credentials:", error);
+        throw error;
+      }
+      
+      console.log("Child credentials created successfully:", data);
+      toast({
+        title: "Credentials created successfully!",
+        description: "Save these credentials for your child to log in.",
+      });
+      
+      return data;
+    } catch (error: any) {
+      console.error("Error in createChildCredentials function:", error);
+      toast({
+        variant: "destructive",
+        title: "Failed to create credentials",
+        description: error.message || "An unexpected error occurred",
+      });
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     signUp,
     signIn,
-    signOut
+    signOut,
+    createChildCredentials
   };
 };

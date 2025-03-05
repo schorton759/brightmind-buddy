@@ -47,8 +47,8 @@ const ChildProfilesList = ({ refreshTrigger, onCreateCredentials }: {
   const [credentials, setCredentials] = useState<ChildCredentials | null>(null);
   const [creatingCredentials, setCreatingCredentials] = useState(false);
   const { toast } = useToast();
-  const { user } = useAuth();
-
+  const { user, signUp, signIn, signOut, updateProfile } = useAuth();
+  
   useEffect(() => {
     fetchChildProfiles();
   }, [refreshTrigger]);
@@ -95,32 +95,32 @@ const ChildProfilesList = ({ refreshTrigger, onCreateCredentials }: {
       setSelectedChild(child);
       setCreatingCredentials(true);
       
-      // Generate a random password (8 characters)
-      const randomPassword = Math.random().toString(36).slice(-8);
-      
-      // Use the username to create an email (for now using a fake domain)
-      const email = `${child.username.toLowerCase()}@brightmindbuddy.example.com`;
-      
-      // Create a new user with Supabase Auth
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password: randomPassword,
-        options: {
-          data: {
-            username: child.username,
-            user_type: 'child',
-            age_group: child.age_group,
-          }
-        }
+      // Use our Edge Function via the useAuthOperations hook (accessed through useAuth)
+      const response = await fetch(`${supabase.supabaseUrl}/functions/v1/create-child-credentials`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabase.supabaseKey}`
+        },
+        body: JSON.stringify({
+          childId: child.id,
+          username: child.username,
+          ageGroup: child.age_group
+        })
       });
       
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create credentials');
+      }
+      
+      const { credentials: resultCredentials } = await response.json();
       
       // Store the credentials to show to the parent
       setCredentials({
-        email,
-        password: randomPassword,
-        username: child.username
+        email: resultCredentials.email,
+        password: resultCredentials.password,
+        username: resultCredentials.username
       });
       
       setShowCredentialsDialog(true);
