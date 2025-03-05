@@ -80,21 +80,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         console.log("No profile found, creating default profile");
         // Create a default profile if none exists
-        const defaultProfile: Partial<Profile> = {
-          id: userId,
-          username: user?.user_metadata?.username || 'New User',
-          user_type: (user?.user_metadata?.user_type as 'child' | 'parent') || 'child',
-          age_group: user?.user_metadata?.age_group as '8-10' | '10-12' | '13-15' | '15+' | null || null
-        };
+        // Make sure all required fields are provided
+        const username = user?.user_metadata?.username || 'New User';
+        const userType = (user?.user_metadata?.user_type as 'child' | 'parent') || 'child';
+        const ageGroup = user?.user_metadata?.age_group as '8-10' | '10-12' | '13-15' | '15+' | null || null;
         
         const { error: insertError } = await supabase
           .from('profiles')
-          .insert([defaultProfile]);
+          .insert({
+            id: userId,
+            username: username,
+            user_type: userType,
+            age_group: ageGroup
+          });
           
         if (insertError) {
           console.error('Error creating default profile:', insertError);
         } else {
-          setProfile(defaultProfile as Profile);
+          // Fetch the newly created profile to ensure we have all fields
+          const { data: newProfile, error: fetchError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .single();
+            
+          if (fetchError) {
+            console.error('Error fetching new profile:', fetchError);
+          } else {
+            setProfile(newProfile as Profile);
+          }
         }
       }
     } catch (error: any) {
