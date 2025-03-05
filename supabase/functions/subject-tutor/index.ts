@@ -2,7 +2,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const fallbackOpenAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,7 +16,22 @@ serve(async (req) => {
   }
 
   try {
-    const { message, subject, ageGroup } = await req.json();
+    const { message, subject, ageGroup, apiKey } = await req.json();
+    
+    // Use provided API key if available, otherwise fall back to environment variable
+    const openAIApiKey = apiKey || fallbackOpenAIApiKey;
+    
+    if (!openAIApiKey) {
+      return new Response(
+        JSON.stringify({ 
+          error: "No API key available. Please add an OpenAI API key in settings." 
+        }), 
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
     
     // Create appropriate system prompts based on subject and age group
     let systemPrompt = "";

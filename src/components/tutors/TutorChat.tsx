@@ -31,8 +31,10 @@ const TutorChat: React.FC<TutorChatProps> = ({
   const [currentMessage, setCurrentMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [parentApiKey, setParentApiKey] = useState<string | null>(null);
+  const [isFetchingKey, setIsFetchingKey] = useState(true);
   
   // Initialize with tutor intro message
   useEffect(() => {
@@ -50,6 +52,79 @@ const TutorChat: React.FC<TutorChatProps> = ({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Fetch parent's API key if needed
+  useEffect(() => {
+    const fetchParentApiKey = async () => {
+      try {
+        setIsFetchingKey(true);
+        
+        // If user is a child, try to find the parent
+        if (profile?.user_type === 'child') {
+          // First get parent connection
+          const { data: connection, error: connectionError } = await supabase
+            .from('family_connections')
+            .select('parent_id')
+            .eq('child_id', profile.id)
+            .single();
+            
+          if (connectionError) {
+            if (connectionError.code !== 'PGRST116') {
+              console.error('Error fetching parent connection:', connectionError);
+            }
+            return;
+          }
+          
+          if (connection?.parent_id) {
+            // Then get parent's API key
+            const { data: settings, error: settingsError } = await supabase
+              .from('parent_settings')
+              .select('openai_key')
+              .eq('parent_id', connection.parent_id)
+              .single();
+              
+            if (settingsError) {
+              if (settingsError.code !== 'PGRST116') {
+                console.error('Error fetching parent settings:', settingsError);
+              }
+              return;
+            }
+            
+            if (settings?.openai_key) {
+              setParentApiKey(settings.openai_key);
+            }
+          }
+        } 
+        // If user is a parent, get their own API key
+        else if (profile?.user_type === 'parent') {
+          const { data: settings, error: settingsError } = await supabase
+            .from('parent_settings')
+            .select('openai_key')
+            .eq('parent_id', profile.id)
+            .single();
+            
+          if (settingsError) {
+            if (settingsError.code !== 'PGRST116') {
+              console.error('Error fetching parent settings:', settingsError);
+            }
+            return;
+          }
+          
+          if (settings?.openai_key) {
+            setParentApiKey(settings.openai_key);
+          }
+        }
+      } catch (error) {
+        console.error('Error in fetchParentApiKey:', error);
+      } finally {
+        setIsFetchingKey(false);
+      }
+    };
+    
+    if (profile) {
+      fetchParentApiKey();
+    }
+  }, [profile]);
 
   const handleSendMessage = async () => {
     if (!currentMessage.trim()) return;
@@ -73,7 +148,8 @@ const TutorChat: React.FC<TutorChatProps> = ({
         body: {
           message: currentMessage,
           subject: subject,
-          ageGroup: profile?.age_group || '8-10'
+          ageGroup: profile?.age_group || '8-10',
+          apiKey: parentApiKey // Pass parent's API key if available
         }
       });
       
@@ -156,6 +232,17 @@ const TutorChat: React.FC<TutorChatProps> = ({
       
       {/* Message input */}
       <div className="border-t border-border p-4">
+        {!isFetchingKey && !parentApiKey ? (
+          <div className="p-3 bg-muted rounded-lg mb-3">
+            <p className="text-sm">
+              {profile?.user_type === 'parent' ? 
+                "Please add your OpenAI API key in Settings to enable the tutor feature." :
+                "The tutor feature requires your parent to add an OpenAI API key."
+              }
+            </p>
+          </div>
+        ) : null}
+        
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -169,10 +256,11 @@ const TutorChat: React.FC<TutorChatProps> = ({
             placeholder="Ask your question..."
             className="flex-1 resize-none"
             rows={2}
+            disabled={isFetchingKey || !parentApiKey}
           />
           <Button 
             type="submit" 
-            disabled={isLoading || !currentMessage.trim()}
+            disabled={isLoading || !currentMessage.trim() || isFetchingKey || !parentApiKey}
           >
             {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send"}
           </Button>
