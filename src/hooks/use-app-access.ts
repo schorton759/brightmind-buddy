@@ -1,82 +1,71 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
-import { useToast } from './use-toast';
-
-interface AppAccess {
-  tutors: boolean;
-  habitTracker: boolean;
-  journalEntries: boolean;
-  taskManager: boolean;
-}
+import { supabase } from '@/integrations/supabase/client';
 
 export const useAppAccess = () => {
-  const [access, setAccess] = useState<AppAccess>({
+  const { profile } = useAuth();
+  const [appAccess, setAppAccess] = useState({
     tutors: true,
     habitTracker: true,
     journalEntries: true,
     taskManager: true
   });
-  const [loading, setLoading] = useState(true);
-  const { user, profile } = useAuth();
-  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (user && profile?.user_type === 'child') {
+    if (profile?.id && profile.user_type === 'child') {
       fetchAppAccess();
     } else {
-      // Parents have access to everything
-      setLoading(false);
+      // If not a child, assume all apps are accessible
+      setIsLoading(false);
     }
-  }, [user, profile]);
+  }, [profile]);
 
   const fetchAppAccess = async () => {
     try {
-      setLoading(true);
-      
+      setIsLoading(true);
+      setError(null);
+
       const { data, error } = await supabase
         .from('child_app_settings')
         .select('*')
-        .eq('child_id', user?.id)
+        .eq('child_id', profile?.id)
         .single();
-        
-      if (error && error.code !== 'PGRST116') { // PGRST116 is 'no rows returned' error
+
+      if (error && error.code !== 'PGRST116') {
         throw error;
       }
-      
+
       if (data) {
-        setAccess({
+        setAppAccess({
           tutors: data.tutors_enabled,
           habitTracker: data.habit_tracker_enabled,
           journalEntries: data.journal_enabled,
           taskManager: data.tasks_enabled
         });
       }
-    } catch (error) {
-      console.error('Error fetching app access:', error);
-      toast({
-        variant: "destructive",
-        title: "Error loading app access settings",
-        description: "Using default access settings."
-      });
+    } catch (err) {
+      console.error('Error fetching app access settings:', err);
+      setError(err instanceof Error ? err : new Error('Failed to fetch app access'));
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const hasAccess = (app: keyof AppAccess): boolean => {
-    // If it's loading or profile is not a child, assume access is granted
-    if (loading || profile?.user_type !== 'child') {
-      return true;
-    }
+  const hasAccess = (app: keyof typeof appAccess): boolean => {
+    // Parents always have access to all apps
+    if (profile?.user_type === 'parent') return true;
     
-    return access[app];
+    // For children, check specific app access
+    return appAccess[app];
   };
 
   return {
-    access,
-    loading,
-    hasAccess
+    hasAccess,
+    isLoading,
+    error,
+    appAccess
   };
 };

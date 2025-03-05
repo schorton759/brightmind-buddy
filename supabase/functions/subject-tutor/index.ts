@@ -1,100 +1,69 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import "https://deno.land/x/xhr@0.1.0/mod.ts"
 
-const fallbackOpenAIApiKey = Deno.env.get('OPENAI_API_KEY');
+interface TutorRequest {
+  userId: string;
+  message: string;
+  subject: string;
+  ageGroup: string;
+  apiKey?: string; // Optional OpenAI API key provided by parent
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+}
 
 serve(async (req) => {
-  // Handle CORS preflight requests
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    const { message, subject, ageGroup, apiKey, userId, parentId } = await req.json();
+    const { userId, message, subject, ageGroup, apiKey } = await req.json() as TutorRequest
     
-    // Create Supabase client
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization') ?? '' },
-        },
-      }
-    );
+    // Determine which API key to use
+    const OPENAI_API_KEY = apiKey || Deno.env.get('OPENAI_API_KEY')
     
-    // Check if we need to get the parent's API key
-    let openAIApiKey = apiKey;
-    
-    if (!openAIApiKey && parentId) {
-      // Try to get the parent's API key from parent_settings
-      console.log(`Trying to get API key from parent: ${parentId}`);
-      
-      const { data: parentSettings, error: parentSettingsError } = await supabaseClient
-        .from('parent_settings')
-        .select('openai_key')
-        .eq('parent_id', parentId)
-        .single();
-        
-      if (parentSettingsError && parentSettingsError.code !== 'PGRST116') {
-        console.error('Error fetching parent settings:', parentSettingsError);
-      }
-      
-      if (parentSettings?.openai_key) {
-        console.log('Using parent\'s API key');
-        openAIApiKey = parentSettings.openai_key;
-      }
-    }
-    
-    // Fall back to environment variable if no API key was found
-    openAIApiKey = openAIApiKey || fallbackOpenAIApiKey;
-    
-    if (!openAIApiKey) {
+    if (!OPENAI_API_KEY) {
       return new Response(
-        JSON.stringify({ 
-          error: "No API key available. Please add an OpenAI API key in settings." 
-        }), 
-        {
-          status: 400,
+        JSON.stringify({ error: 'OpenAI API key not configured. Please add it in the parent settings.' }),
+        { 
+          status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
-      );
-    }
-    
-    // Create appropriate system prompts based on subject and age group
-    let systemPrompt = "";
-    
-    if (subject === "math") {
-      systemPrompt = `You are a friendly and patient math tutor for children in the ${ageGroup} age group. 
-      Explain concepts simply and clearly. Use age-appropriate language and examples.
-      Focus on building confidence and making math fun. Break down problems into simple steps.
-      For young children (8-10), use very simple language and concrete examples.
-      For older children (10+), you can introduce more abstract concepts gradually.
-      Always be encouraging and positive. Never give direct answers to homework problems,
-      but guide the student through the process of solving it themselves.`;
-    } else if (subject === "language") {
-      systemPrompt = `You are a friendly and supportive language tutor for children in the ${ageGroup} age group.
-      Help with reading comprehension, vocabulary, grammar, and writing skills.
-      Explain concepts using age-appropriate language and examples.
-      For young children (8-10), focus on basic language skills and use simple explanations.
-      For older children (10+), you can discuss more complex language concepts.
-      Always be encouraging and make learning language fun. Provide constructive feedback
-      and suggest improvements rather than simply correcting mistakes.`;
+      )
     }
 
-    console.log(`Processing ${subject} tutor request for ${ageGroup} age group`);
+    // Create system prompt based on subject and age group
+    let systemPrompt = `You are a helpful ${subject} tutor for students in the ${ageGroup} age group. `
     
+    if (subject === 'math') {
+      systemPrompt += `You help with math concepts, problem-solving, and explaining mathematical ideas in a clear, 
+      age-appropriate way. You can work through problems step-by-step and provide guidance without giving away answers immediately.
+      Always encourage critical thinking and provide praise for effort.`
+    } else if (subject === 'language') {
+      systemPrompt += `You help with reading comprehension, writing, vocabulary, grammar, and language skills 
+      appropriate for the ${ageGroup} age group. You provide explanations, examples, and constructive feedback 
+      that helps the student improve their language abilities.`
+    } else if (subject === 'science') {
+      systemPrompt += `You help explain scientific concepts, theories, and experiments in an engaging and 
+      age-appropriate way for ${ageGroup} students. You make complex ideas understandable and encourage 
+      curiosity and critical thinking.`
+    } else {
+      systemPrompt += `You provide helpful, educational guidance on ${subject} topics appropriate for ${ageGroup} students.
+      You're encouraging, patient, and focus on making learning engaging and fun.`
+    }
+
+    console.log(`Processing ${subject} tutor request for age group ${ageGroup}`)
+
+    // Call OpenAI API
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -104,27 +73,38 @@ serve(async (req) => {
           { role: 'user', content: message }
         ],
         temperature: 0.7,
+        max_tokens: 1000,
       }),
-    });
+    })
 
-    const data = await response.json();
+    const data = await response.json()
     
-    if (!response.ok) {
-      console.error('OpenAI API error:', data);
-      throw new Error(data.error?.message || 'Failed to get response from AI');
+    if (data.error) {
+      console.error('OpenAI API error:', data.error)
+      return new Response(
+        JSON.stringify({ error: data.error.message || 'Error calling OpenAI API' }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
     }
-    
-    const tutorResponse = data.choices[0].message.content;
-    console.log('Tutor response generated successfully');
 
-    return new Response(JSON.stringify({ response: tutorResponse }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    const tutorResponse = data.choices[0].message.content
+    
+    return new Response(
+      JSON.stringify({ response: tutorResponse }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
   } catch (error) {
-    console.error('Error in subject-tutor function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    console.error('Error processing tutor request:', error)
+    
+    return new Response(
+      JSON.stringify({ error: error.message || 'Internal server error' }),
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    )
   }
-});
+})
