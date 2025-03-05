@@ -13,6 +13,10 @@ import { UserMenu } from '@/components/UserMenu';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { Database } from '@/integrations/supabase/types';
+
+// Define the age group type to match Supabase's type
+type AgeGroup = '8-10' | '10-12' | '13-15' | '15+';
 
 const Index = () => {
   const { profile, isLoading } = useAuth();
@@ -27,7 +31,7 @@ const Index = () => {
       if (profile) {
         if (profile.user_type === 'child' && profile.age_group) {
           setCurrentView('dashboard');
-          fetchCoachTip(profile.age_group);
+          fetchCoachTip(profile.age_group as AgeGroup);
         } else if (profile.user_type === 'child' && !profile.age_group) {
           setCurrentView('age-select');
         } else {
@@ -38,7 +42,7 @@ const Index = () => {
     }
   }, [profile, isLoading]);
   
-  const fetchCoachTip = async (ageGroup: string) => {
+  const fetchCoachTip = async (ageGroup: AgeGroup) => {
     try {
       const { data, error } = await supabase
         .from('coach_tips')
@@ -67,7 +71,7 @@ const Index = () => {
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({ age_group: group })
+        .update({ age_group: group as AgeGroup })
         .eq('id', profile.id);
         
       if (error) throw error;
