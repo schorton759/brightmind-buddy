@@ -1,8 +1,8 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Link } from 'react-router-dom';
 
 interface TutorCardProps {
   title: string;
@@ -56,6 +56,12 @@ const TutorsHub: React.FC = () => {
           description="Improve reading, writing, vocabulary, and grammar"
           imageSrc="/tutors/language-tutor.png" 
           onClick={() => navigate('/tutors/language')}
+        />
+        <TutorCard 
+          title="Science Tutor" 
+          description="Learn about science topics, experiments, and more"
+          imageSrc="/tutors/science-tutor.png"
+          onClick={() => navigate('/tutors/science')}
         />
       </div>
     </div>

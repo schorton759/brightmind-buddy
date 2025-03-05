@@ -6,6 +6,9 @@ import Auth from './pages/Auth';
 import Profile from './pages/Profile';
 import AgeSelect from './pages/AgeSelect';
 import ParentSettings from './pages/ParentSettings';
+import MathTutor from '@/components/tutors/MathTutor';
+import LanguageTutor from '@/components/tutors/LanguageTutor';
+import ScienceTutor from '@/components/tutors/ScienceTutor';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, isLoading } = useAuth();
@@ -64,6 +67,21 @@ const App = () => {
               </ProtectedRoute>
             }
           />
+          <Route path="/tutors/math" element={
+            <ProtectedRoute>
+              <MathTutor />
+            </ProtectedRoute>
+          } />
+          <Route path="/tutors/language" element={
+            <ProtectedRoute>
+              <LanguageTutor />
+            </ProtectedRoute>
+          } />
+          <Route path="/tutors/science" element={
+            <ProtectedRoute>
+              <ScienceTutor />
+            </ProtectedRoute>
+          } />
         </Routes>
       </Router>
     </AuthProvider>

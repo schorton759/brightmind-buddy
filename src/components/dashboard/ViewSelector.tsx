@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Dashboard from '@/components/Dashboard';
@@ -8,6 +7,7 @@ import TaskManager from '@/components/TaskManager';
 import TutorsHub from '@/components/tutors/TutorsHub';
 import MathTutor from '@/components/tutors/MathTutor';
 import LanguageTutor from '@/components/tutors/LanguageTutor';
+import ScienceTutor from '@/components/tutors/ScienceTutor';
 import ParentDashboard from '@/components/parent/ParentDashboard';
 import UserAgeSelector from '@/components/UserAgeSelector';
 import { Profile } from '@/types/auth';
@@ -147,6 +147,18 @@ const ViewSelector = ({
           transition={{ duration: 0.4 }}
         >
           <LanguageTutor />
+        </motion.div>
+      )}
+      
+      {currentView === 'science-tutor' && (
+        <motion.div
+          key="science-tutor"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.4 }}
+        >
+          <ScienceTutor />
         </motion.div>
       )}
     </AnimatePresence>
