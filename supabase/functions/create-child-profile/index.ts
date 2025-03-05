@@ -58,31 +58,79 @@ serve(async (req) => {
     
     console.log(`Creating child profile for ${username} with age group ${age_group}`);
     
-    // Generate a UUID for the child
-    const childId = crypto.randomUUID();
-    console.log(`Generated child ID: ${childId}`);
+    // First, create a temporary auth user for the child
+    // Generate a random email that won't be used (it's just for the database)
+    const randomId = crypto.randomUUID();
+    const tempEmail = `temp-${randomId}@example.com`;
+    const tempPassword = crypto.randomUUID(); // This won't be used either
     
-    // Create the child profile with the admin client
-    const { data: childProfileData, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .insert({
-        id: childId,
+    console.log(`Creating temporary auth user with email: ${tempEmail}`);
+    
+    // Create the auth user
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: tempEmail,
+      password: tempPassword,
+      email_confirm: true, // Auto-confirm the email
+      user_metadata: {
         username,
         user_type: 'child',
-        age_group,
-      })
-      .select('*')
-      .single();
-      
-    if (profileError) {
-      console.error('Error creating child profile:', profileError);
+        age_group
+      }
+    });
+    
+    if (authError) {
+      console.error('Error creating auth user:', authError);
       return new Response(
-        JSON.stringify({ error: `Failed to create child profile: ${profileError.message}` }),
+        JSON.stringify({ error: `Failed to create auth user: ${authError.message}` }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
     
-    console.log('Child profile created successfully:', childProfileData);
+    const childId = authData.user.id;
+    console.log(`Auth user created with ID: ${childId}`);
+    
+    // The profile should be created automatically via trigger, but let's verify it exists
+    const { data: profileData, error: profileCheckError } = await supabaseAdmin
+      .from('profiles')
+      .select('*')
+      .eq('id', childId)
+      .single();
+      
+    if (profileCheckError) {
+      console.error('Error verifying profile:', profileCheckError);
+      return new Response(
+        JSON.stringify({ error: `Failed to verify profile: ${profileCheckError.message}` }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    if (!profileData) {
+      console.error('Profile not created automatically, attempting manual creation');
+      
+      // If the profile doesn't exist for some reason, create it manually
+      const { data: manualProfileData, error: manualProfileError } = await supabaseAdmin
+        .from('profiles')
+        .insert({
+          id: childId,
+          username,
+          user_type: 'child',
+          age_group,
+        })
+        .select('*')
+        .single();
+        
+      if (manualProfileError) {
+        console.error('Error creating profile manually:', manualProfileError);
+        return new Response(
+          JSON.stringify({ error: `Failed to create profile: ${manualProfileError.message}` }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      console.log('Profile created manually:', manualProfileData);
+    } else {
+      console.log('Profile created automatically:', profileData);
+    }
     
     // Create the family connection
     const { error: connectionError } = await supabaseAdmin
@@ -105,7 +153,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        childProfile: childProfileData || null 
+        childProfile: profileData || null 
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
