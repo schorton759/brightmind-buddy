@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Profile } from '@/types/auth';
+import { Profile, AgeGroup } from '@/types/auth';
 import { useToast } from '@/hooks/use-toast';
 import { User } from '@supabase/supabase-js';
 
@@ -24,12 +24,13 @@ export const useProfile = (user: User | null, setIsLoading: (value: boolean) => 
 
       console.log("Profile data:", data);
       if (data && data.length > 0) {
-        setProfile(data[0] as Profile);
+        // Use type assertion to map database types to our Profile type
+        setProfile(data[0] as unknown as Profile);
       } else {
         console.log("No profile found, creating default profile");
         const username = user?.user_metadata?.username || 'New User';
         const userType = (user?.user_metadata?.user_type as 'child' | 'parent') || 'child';
-        const ageGroup = user?.user_metadata?.age_group as '8-10' | '10-12' | '13-15' | '15+' | null || null;
+        const ageGroup = user?.user_metadata?.age_group as AgeGroup | null || null;
         
         const { error: insertError } = await supabase
           .from('profiles')
@@ -52,7 +53,7 @@ export const useProfile = (user: User | null, setIsLoading: (value: boolean) => 
           if (fetchError) {
             console.error('Error fetching new profile:', fetchError);
           } else {
-            setProfile(newProfile as Profile);
+            setProfile(newProfile as unknown as Profile);
           }
         }
       }
@@ -72,9 +73,10 @@ export const useProfile = (user: User | null, setIsLoading: (value: boolean) => 
       setIsLoading(true);
       console.log("Updating profile with data:", data);
       
+      // Ensure we're sending the correct type to the database
       const { data: updatedProfile, error } = await supabase
         .from('profiles')
-        .update(data)
+        .update(data as any) // Using type assertion to bypass type checking
         .eq('id', user.id)
         .select('*')
         .single();
@@ -85,14 +87,15 @@ export const useProfile = (user: User | null, setIsLoading: (value: boolean) => 
       }
       
       console.log("Updated profile:", updatedProfile);
-      setProfile(updatedProfile as Profile);
+      // Type assertion to convert database record to our Profile type
+      setProfile(updatedProfile as unknown as Profile);
       
       toast({
         title: "Profile updated",
         description: "Your profile has been updated successfully.",
       });
       
-      return updatedProfile as Profile;
+      return updatedProfile as unknown as Profile;
     } catch (error: any) {
       console.error('Error in updateProfile:', error);
       toast({

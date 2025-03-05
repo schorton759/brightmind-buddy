@@ -13,8 +13,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
-  const { profile, setProfile, fetchUserProfile, updateProfile } = useProfile(user, setIsLoading);
+  const { profile, setProfile, fetchUserProfile, updateProfile: rawUpdateProfile } = useProfile(user, setIsLoading);
   const { signUp, signIn, signOut, createChildCredentials } = useAuthOperations(setIsLoading);
+
+  // Wrap the updateProfile function to match the expected return type
+  const updateProfile = async (updates: Partial<Profile>): Promise<void> => {
+    await rawUpdateProfile(updates);
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {

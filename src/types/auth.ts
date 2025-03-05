@@ -2,7 +2,7 @@
 import { Session, User } from '@supabase/supabase-js';
 
 export type UserType = 'child' | 'parent';
-export type AgeGroup = '5-8' | '9-12' | '13-16';
+export type AgeGroup = '8-10' | '10-12' | '13-15' | '15+';
 
 export interface Profile {
   id: string;

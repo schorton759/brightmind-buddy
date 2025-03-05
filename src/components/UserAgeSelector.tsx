@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import AgeGroupSelector from '@/components/AgeGroupSelector';
@@ -7,8 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from './ui/button';
 import { LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
-type AgeGroup = '8-10' | '10-12' | '13-15' | '15+';
+import { AgeGroup } from '@/types/auth';
 
 const UserAgeSelector = ({ onSelectComplete }: { onSelectComplete: () => void }) => {
   const { profile, updateProfile, user, signOut } = useAuth();
@@ -24,12 +22,10 @@ const UserAgeSelector = ({ onSelectComplete }: { onSelectComplete: () => void })
     try {
       console.log(`Updating age group to ${group} for user ID: ${user.id}`);
       
-      const updatedProfile = await updateProfile({ age_group: group as AgeGroup });
+      await updateProfile({ age_group: group as AgeGroup });
       
-      if (updatedProfile) {
-        // Transition to dashboard
-        onSelectComplete();
-      }
+      // Transition to dashboard
+      onSelectComplete();
     } catch (error: any) {
       console.error('Failed to update age group:', error);
       toast({

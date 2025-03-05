@@ -95,12 +95,12 @@ const ChildProfilesList = ({ refreshTrigger, onCreateCredentials }: {
       setSelectedChild(child);
       setCreatingCredentials(true);
       
-      // Use our Edge Function via the useAuthOperations hook (accessed through useAuth)
-      const response = await fetch(`${supabase.supabaseUrl}/functions/v1/create-child-credentials`, {
+      // Call the function through Supabase Functions API
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-child-credentials`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabase.supabaseKey}`
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
         },
         body: JSON.stringify({
           childId: child.id,
