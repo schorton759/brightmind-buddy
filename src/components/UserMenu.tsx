@@ -11,9 +11,16 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { UserAvatar } from "./UserAvatar";
 import { Settings, LogOut, User } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export function UserMenu() {
   const { profile, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
+  };
 
   return (
     <DropdownMenu>
@@ -41,7 +48,7 @@ export function UserMenu() {
           <span>Settings</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => signOut()}>
+        <DropdownMenuItem onClick={handleSignOut}>
           <LogOut className="mr-2 h-4 w-4" />
           <span>Log out</span>
         </DropdownMenuItem>
