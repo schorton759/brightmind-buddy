@@ -65,44 +65,26 @@ const AddChildForm = ({ onComplete }: AddChildFormProps) => {
       setIsSubmitting(true);
       console.log("Starting child profile creation with values:", values);
       
-      // Create a generated UUID for the child profile
-      const childId = crypto.randomUUID();
-      console.log("Generated child ID:", childId);
-      
-      // Create child profile using the service role client or use RPC function if available
-      // First attempt to create the profile directly
-      const { data: childProfileData, error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: childId,
+      // Call the Supabase Edge Function to create the child profile
+      const { data, error } = await supabase.functions.invoke('create-child-profile', {
+        body: {
           username: values.username,
-          user_type: 'child',
-          age_group: values.age_group as any,
-        })
-        .select('*');
-
-      if (profileError) {
-        console.error('Profile creation error:', profileError);
-        
-        // Try an alternative approach - using RPC if we have one set up
-        // Or we could use a Supabase Edge Function here if needed
-        throw new Error(`Failed to create child profile: ${profileError.message}`);
-      }
-
-      console.log('Child profile created successfully:', childProfileData);
-
-      // Create family connection
-      const { error: connectionError } = await supabase
-        .from('family_connections')
-        .insert({
+          age_group: values.age_group,
           parent_id: user.id,
-          child_id: childId,
-        });
-
-      if (connectionError) {
-        console.error('Connection error:', connectionError);
-        throw new Error(`Failed to create family connection: ${connectionError.message}`);
+        },
+      });
+      
+      if (error) {
+        console.error('Edge function error:', error);
+        throw new Error(`Failed to create child profile: ${error.message}`);
       }
+      
+      if (data.error) {
+        console.error('Edge function returned error:', data.error);
+        throw new Error(`Failed to create child profile: ${data.error}`);
+      }
+      
+      console.log('Child profile created successfully:', data);
 
       toast({
         title: "Child profile created",
