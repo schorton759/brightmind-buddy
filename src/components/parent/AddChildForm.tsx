@@ -63,12 +63,16 @@ const AddChildForm = ({ onComplete }: AddChildFormProps) => {
 
     try {
       setIsSubmitting(true);
+      console.log("Starting child profile creation with values:", values);
       
-      // Generate a UUID for the child profile
+      // Create a generated UUID for the child profile
       const childId = crypto.randomUUID();
+      console.log("Generated child ID:", childId);
       
-      // Step 1: Create child profile
-      const { data: childProfileData, error: profileError } = await supabase.from('profiles')
+      // Create child profile using the service role client or use RPC function if available
+      // First attempt to create the profile directly
+      const { data: childProfileData, error: profileError } = await supabase
+        .from('profiles')
         .insert({
           id: childId,
           username: values.username,
@@ -79,12 +83,15 @@ const AddChildForm = ({ onComplete }: AddChildFormProps) => {
 
       if (profileError) {
         console.error('Profile creation error:', profileError);
+        
+        // Try an alternative approach - using RPC if we have one set up
+        // Or we could use a Supabase Edge Function here if needed
         throw new Error(`Failed to create child profile: ${profileError.message}`);
       }
 
-      console.log('Child profile created:', childProfileData);
+      console.log('Child profile created successfully:', childProfileData);
 
-      // Step 2: Create family connection
+      // Create family connection
       const { error: connectionError } = await supabase
         .from('family_connections')
         .insert({
