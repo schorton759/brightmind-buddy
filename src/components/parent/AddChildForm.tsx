@@ -1,189 +1,176 @@
 
 import React, { useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import * as z from 'zod';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
-interface AddChildFormProps {
+const formSchema = z.object({
+  username: z.string().min(2, {
+    message: "Username must be at least 2 characters.",
+  }),
+  age_group: z.string({
+    required_error: "Please select an age group.",
+  }),
+});
+
+type AddChildFormProps = {
   onComplete: () => void;
-}
+};
 
 const AddChildForm = ({ onComplete }: AddChildFormProps) => {
-  const { profile } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
-  const [firstName, setFirstName] = useState('');
-  const [ageGroup, setAgeGroup] = useState<string>('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [credentials, setCredentials] = useState<{email: string, password: string} | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    
-    if (!firstName || !ageGroup || !email || !password) {
-      setError('Please fill in all fields');
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      username: "",
+      age_group: "",
+    },
+  });
+
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Authentication error",
+        description: "You must be logged in to create a child profile.",
+      });
       return;
     }
-    
-    setIsLoading(true);
-    
+
     try {
-      // 1. Create the child account with Supabase Auth
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            username: firstName,
-            user_type: 'child',
-            age_group: ageGroup
-          }
-        }
-      });
-      
-      if (signUpError) throw signUpError;
-      
-      if (!data.user) {
-        throw new Error('Failed to create user account');
-      }
-      
-      // 2. Create the family connection in the database
+      setIsSubmitting(true);
+
+      // Step 1: Insert profile
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: crypto.randomUUID(), // Generate a UUID for the child profile
+          username: values.username,
+          user_type: 'child',
+          age_group: values.age_group as any,
+        })
+        .select()
+        .single();
+
+      if (profileError) throw profileError;
+
+      // Step 2: Create family connection
       const { error: connectionError } = await supabase
         .from('family_connections')
         .insert({
-          parent_id: profile?.id,
-          child_id: data.user.id
+          parent_id: user.id,
+          child_id: profileData.id,
         });
-      
+
       if (connectionError) throw connectionError;
-      
-      // Store credentials to show to parent
-      setCredentials({ email, password });
-      
+
       toast({
-        title: "Child account created!",
-        description: "The account has been created successfully.",
+        title: "Child profile created",
+        description: `${values.username}'s profile has been created successfully.`,
       });
+
+      onComplete();
     } catch (error: any) {
-      console.error('Error creating child account:', error);
-      setError(error.message || 'Failed to create child account');
-      setCredentials(null);
+      console.error('Error creating child profile:', error.message);
+      toast({
+        variant: "destructive",
+        title: "Failed to create child profile",
+        description: error.message || "Please try again later.",
+      });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  if (credentials) {
-    return (
-      <Card className="p-6 border-green-200 bg-green-50">
-        <h3 className="text-lg font-bold mb-4">Child Account Created!</h3>
-        <p className="mb-4">Please save these credentials to share with your child:</p>
-        <div className="space-y-2 mb-6">
-          <div className="bg-white p-3 rounded border">
-            <p className="font-medium">Email:</p>
-            <p className="text-sm">{credentials.email}</p>
-          </div>
-          <div className="bg-white p-3 rounded border">
-            <p className="font-medium">Password:</p>
-            <p className="text-sm">{credentials.password}</p>
-          </div>
-        </div>
-        <p className="text-sm text-muted-foreground mb-4">
-          Make sure to save these details before closing this window.
-        </p>
-        <div className="flex justify-end">
-          <Button onClick={onComplete}>Done</Button>
-        </div>
-      </Card>
-    );
-  }
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="firstName">Child's First Name</Label>
-        <Input 
-          id="firstName"
-          value={firstName}
-          onChange={(e) => setFirstName(e.target.value)}
-          placeholder="Enter first name"
-          disabled={isLoading}
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <FormField
+          control={form.control}
+          name="username"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Child's Name</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter your child's name" {...field} />
+              </FormControl>
+              <FormDescription>
+                This is how your child will be identified in the app.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="age-group">Age Group</Label>
-        <Select 
-          value={ageGroup} 
-          onValueChange={setAgeGroup}
-          disabled={isLoading}
-        >
-          <SelectTrigger id="age-group">
-            <SelectValue placeholder="Select age group" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="8-10">8-10 years</SelectItem>
-            <SelectItem value="10-12">10-12 years</SelectItem>
-            <SelectItem value="13-15">13-15 years</SelectItem>
-            <SelectItem value="15+">15+ years</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
-        <Input 
-          id="email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Enter email for login"
-          disabled={isLoading}
+
+        <FormField
+          control={form.control}
+          name="age_group"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Age Group</FormLabel>
+              <Select 
+                onValueChange={field.onChange} 
+                defaultValue={field.value}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select age group" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="8-10">8-10 years</SelectItem>
+                  <SelectItem value="10-12">10-12 years</SelectItem>
+                  <SelectItem value="13-15">13-15 years</SelectItem>
+                  <SelectItem value="15+">15+ years</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormDescription>
+                The age group helps us provide age-appropriate content.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
-        <Input 
-          id="password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Create a password"
-          disabled={isLoading}
-        />
-      </div>
-      
-      {error && <p className="text-sm text-destructive">{error}</p>}
-      
-      <div className="flex justify-end space-x-2">
-        <Button 
-          type="button" 
-          variant="outline" 
-          onClick={onComplete}
-          disabled={isLoading}
-        >
-          Cancel
-        </Button>
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Creating...
-            </>
-          ) : 'Create Account'}
-        </Button>
-      </div>
-    </form>
+
+        <div className="flex justify-end gap-2">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={onComplete} 
+            disabled={isSubmitting}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Creating..." : "Create Child Profile"}
+          </Button>
+        </div>
+      </form>
+    </Form>
   );
 };
 

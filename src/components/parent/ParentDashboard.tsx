@@ -1,16 +1,35 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, RefreshCw } from 'lucide-react';
 import AddChildForm from './AddChildForm';
 import ChildProfilesList from './ChildProfilesList';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const ParentDashboard = () => {
   const { profile } = useAuth();
   const [showAddChildForm, setShowAddChildForm] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const refreshChildProfiles = () => {
+    setIsLoading(true);
+    setRefreshTrigger(prev => prev + 1);
+    
+    // Add a small delay to allow the database to update
+    setTimeout(() => {
+      setIsLoading(false);
+      toast({
+        title: "Refreshed",
+        description: "Child profiles have been refreshed",
+      });
+    }, 500);
+  };
 
   return (
     <div className="w-full max-w-4xl mx-auto p-4">
@@ -34,21 +53,41 @@ const ParentDashboard = () => {
                 <CardTitle>Child Profiles</CardTitle>
                 <CardDescription>Create and manage accounts for your children</CardDescription>
               </div>
-              <Button 
-                onClick={() => setShowAddChildForm(true)} 
-                className="flex items-center gap-2"
-                disabled={showAddChildForm}
-              >
-                <Plus className="h-4 w-4" />
-                Add Child
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline"
+                  size="icon"
+                  onClick={refreshChildProfiles}
+                  disabled={isLoading}
+                >
+                  <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                </Button>
+                <Button 
+                  onClick={() => setShowAddChildForm(true)} 
+                  className="flex items-center gap-2"
+                  disabled={showAddChildForm}
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Child
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
             {showAddChildForm ? (
-              <AddChildForm onComplete={() => setShowAddChildForm(false)} />
+              <AddChildForm 
+                onComplete={() => {
+                  setShowAddChildForm(false);
+                  refreshChildProfiles();
+                }} 
+              />
             ) : (
-              <ChildProfilesList />
+              <ChildProfilesList 
+                refreshTrigger={refreshTrigger} 
+                onCreateCredentials={(childId) => {
+                  // We'll implement this functionality in the ChildProfilesList component
+                }} 
+              />
             )}
           </CardContent>
         </Card>

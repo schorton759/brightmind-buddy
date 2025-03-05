@@ -1,112 +1,290 @@
 
-import React, { useEffect, useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import { useToast } from '@/hooks/use-toast';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent } from '@/components/ui/card';
+import { 
+  Card, 
+  CardContent, 
+  CardFooter, 
+  CardHeader, 
+  CardTitle 
+} from '@/components/ui/card';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle 
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, User, LogIn } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Key, Trash2, User } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { useAuth } from '@/context/AuthContext';
 
-interface ChildProfile {
+type ChildProfile = {
   id: string;
   username: string;
-  age_group: string;
-  email?: string;
-}
+  age_group: string | null;
+};
 
-const ChildProfilesList = () => {
-  const { profile } = useAuth();
+type ChildCredentials = {
+  email: string;
+  password: string;
+  username: string;
+};
+
+const ChildProfilesList = ({ refreshTrigger, onCreateCredentials }: { 
+  refreshTrigger: number;
+  onCreateCredentials: (childId: string) => void; 
+}) => {
+  const [childProfiles, setChildProfiles] = useState<ChildProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedChild, setSelectedChild] = useState<ChildProfile | null>(null);
+  const [showCredentialsDialog, setShowCredentialsDialog] = useState(false);
+  const [credentials, setCredentials] = useState<ChildCredentials | null>(null);
+  const [creatingCredentials, setCreatingCredentials] = useState(false);
   const { toast } = useToast();
-  const [children, setChildren] = useState<ChildProfile[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
-    const fetchChildren = async () => {
-      if (!profile?.id) return;
+    fetchChildProfiles();
+  }, [refreshTrigger]);
+
+  const fetchChildProfiles = async () => {
+    try {
+      setLoading(true);
       
-      try {
-        // Get family connections for this parent
-        const { data: connections, error: connectionsError } = await supabase
-          .from('family_connections')
-          .select('child_id')
-          .eq('parent_id', profile.id);
+      const { data: connections, error: connectionsError } = await supabase
+        .from('family_connections')
+        .select('child_id')
+        .eq('parent_id', user?.id);
+      
+      if (connectionsError) throw connectionsError;
+      
+      if (connections && connections.length > 0) {
+        const childIds = connections.map(connection => connection.child_id);
         
-        if (connectionsError) throw connectionsError;
-        
-        if (!connections || connections.length === 0) {
-          setChildren([]);
-          setIsLoading(false);
-          return;
-        }
-        
-        // Get child profiles
-        const childIds = connections.map(conn => conn.child_id);
-        const { data: childProfiles, error: profilesError } = await supabase
+        const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
           .select('id, username, age_group')
           .in('id', childIds);
         
         if (profilesError) throw profilesError;
         
-        // Get email addresses from auth.users (if available)
-        // Note: This might require additional permissions
-        const childrenWithEmail = childProfiles || [];
-        
-        setChildren(childrenWithEmail);
-      } catch (error: any) {
-        console.error('Error fetching children:', error);
-        toast({
-          variant: "destructive",
-          title: "Failed to load child profiles",
-          description: error.message,
-        });
-      } finally {
-        setIsLoading(false);
+        setChildProfiles(profiles || []);
+      } else {
+        setChildProfiles([]);
       }
-    };
-    
-    fetchChildren();
-  }, [profile?.id]);
+    } catch (error: any) {
+      console.error('Error fetching child profiles:', error.message);
+      toast({
+        variant: "destructive",
+        title: "Error fetching child profiles",
+        description: error.message,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  if (isLoading) {
+  const handleCreateCredentials = async (child: ChildProfile) => {
+    try {
+      setSelectedChild(child);
+      setCreatingCredentials(true);
+      
+      // Generate a random password (8 characters)
+      const randomPassword = Math.random().toString(36).slice(-8);
+      
+      // Use the username to create an email (for now using a fake domain)
+      const email = `${child.username.toLowerCase()}@brightmindbuddy.example.com`;
+      
+      // Create a new user with Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password: randomPassword,
+        options: {
+          data: {
+            username: child.username,
+            user_type: 'child',
+            age_group: child.age_group,
+          }
+        }
+      });
+      
+      if (error) throw error;
+      
+      // Store the credentials to show to the parent
+      setCredentials({
+        email,
+        password: randomPassword,
+        username: child.username
+      });
+      
+      setShowCredentialsDialog(true);
+      
+      toast({
+        title: "Credentials created",
+        description: "Login credentials have been created for your child.",
+      });
+    } catch (error: any) {
+      console.error('Error creating credentials:', error.message);
+      toast({
+        variant: "destructive",
+        title: "Failed to create credentials",
+        description: error.message || "Please try again later.",
+      });
+    } finally {
+      setCreatingCredentials(false);
+    }
+  };
+
+  const handleDeleteChild = async (childId: string) => {
+    try {
+      // Delete the family connection
+      const { error } = await supabase
+        .from('family_connections')
+        .delete()
+        .eq('child_id', childId)
+        .eq('parent_id', user?.id);
+      
+      if (error) throw error;
+      
+      // Remove from local state
+      setChildProfiles(prev => prev.filter(child => child.id !== childId));
+      
+      toast({
+        title: "Child profile removed",
+        description: "The child profile has been removed from your account.",
+      });
+    } catch (error: any) {
+      console.error('Error deleting child profile:', error.message);
+      toast({
+        variant: "destructive",
+        title: "Failed to delete child profile",
+        description: error.message || "Please try again later.",
+      });
+    }
+  };
+
+  if (loading) {
     return (
-      <div className="flex justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="space-y-3">
+        {[1, 2].map(i => (
+          <Card key={i}>
+            <CardContent className="p-4">
+              <div className="flex justify-between items-center">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-[150px]" />
+                  <Skeleton className="h-4 w-[100px]" />
+                </div>
+                <Skeleton className="h-8 w-[100px]" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     );
   }
 
-  if (children.length === 0) {
+  if (childProfiles.length === 0) {
     return (
-      <div className="text-center p-8">
-        <User className="mx-auto h-12 w-12 text-muted-foreground opacity-50 mb-4" />
-        <h3 className="text-lg font-medium mb-2">No child profiles yet</h3>
-        <p className="text-sm text-muted-foreground mb-4">
-          Add your child's information to create their BrightMind Buddy account.
+      <div className="text-center py-8">
+        <User className="mx-auto h-12 w-12 text-muted-foreground/50" />
+        <h3 className="mt-4 text-lg font-medium">No child profiles yet</h3>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Add a child profile to get started
         </p>
       </div>
     );
   }
 
   return (
-    <div className="grid gap-4">
-      {children.map((child) => (
-        <Card key={child.id} className="overflow-hidden">
-          <CardContent className="p-0">
-            <div className="flex items-center justify-between p-4">
-              <div>
-                <h3 className="font-medium">{child.username}</h3>
-                <p className="text-sm text-muted-foreground">
-                  Age group: {child.age_group}
-                </p>
-              </div>
-              <Button variant="ghost" size="icon" title="View full details">
-                <LogIn className="h-4 w-4" />
-              </Button>
+    <div className="space-y-4">
+      {childProfiles.map(child => (
+        <Card key={child.id}>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">{child.username}</CardTitle>
+          </CardHeader>
+          <CardContent className="pb-2">
+            <div className="flex items-center justify-between">
+              <Badge variant="outline">
+                {child.age_group ? `Age: ${child.age_group}` : 'Age not set'}
+              </Badge>
             </div>
           </CardContent>
+          <CardFooter className="flex justify-end gap-2">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Remove
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will remove the connection between your account and your child's profile.
+                    This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction 
+                    onClick={() => handleDeleteChild(child.id)}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Remove
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            
+            <Button 
+              onClick={() => handleCreateCredentials(child)}
+              disabled={creatingCredentials && selectedChild?.id === child.id}
+            >
+              <Key className="h-4 w-4 mr-2" />
+              {creatingCredentials && selectedChild?.id === child.id 
+                ? 'Creating...' 
+                : 'Create Login'}
+            </Button>
+          </CardFooter>
         </Card>
       ))}
+
+      {/* Credentials Dialog */}
+      <Dialog open={showCredentialsDialog} onOpenChange={setShowCredentialsDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Login Credentials</DialogTitle>
+            <DialogDescription>
+              Save these login details for {credentials?.username}. You will need them for your child to log in.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {credentials && (
+            <div className="bg-secondary p-4 rounded-md space-y-2 font-mono text-sm">
+              <div>
+                <span className="font-semibold">Username:</span> {credentials.username}
+              </div>
+              <div>
+                <span className="font-semibold">Email:</span> {credentials.email}
+              </div>
+              <div>
+                <span className="font-semibold">Password:</span> {credentials.password}
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button onClick={() => setShowCredentialsDialog(false)}>Done</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
