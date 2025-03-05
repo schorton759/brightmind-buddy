@@ -63,16 +63,11 @@ const AddChildForm = ({ onComplete }: AddChildFormProps) => {
 
     try {
       setIsSubmitting(true);
-
-      // Create the child profile using the service role client
-      // This will be a server function to bypass RLS in the future
-      // For now, we'll work directly with the client but use a more permissive approach
       
       // Generate a UUID for the child profile
       const childId = crypto.randomUUID();
       
-      // Step 1: Create profile directly (with permission granted by the DB policy)
-      // Using direct insert with raw SQL would be better but requires server function
+      // Step 1: Create child profile
       const { data: childProfileData, error: profileError } = await supabase.from('profiles')
         .insert({
           id: childId,
