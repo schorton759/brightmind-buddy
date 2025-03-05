@@ -10,7 +10,7 @@ import ChildProfilesList from './ChildProfilesList';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
-const ParentDashboard = () => {
+const ParentDashboard = ({ onViewChildDashboard }: { onViewChildDashboard?: (childId: string, username: string) => void }) => {
   const { profile } = useAuth();
   const [showAddChildForm, setShowAddChildForm] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -29,6 +29,17 @@ const ParentDashboard = () => {
         description: "Child profiles have been refreshed",
       });
     }, 500);
+  };
+
+  const handleViewChildDashboard = (childId: string, username: string) => {
+    if (onViewChildDashboard) {
+      onViewChildDashboard(childId, username);
+    } else {
+      toast({
+        title: "Feature not available",
+        description: "Viewing child dashboard will be available soon",
+      });
+    }
   };
 
   return (
@@ -86,7 +97,8 @@ const ParentDashboard = () => {
                 refreshTrigger={refreshTrigger} 
                 onCreateCredentials={(childId) => {
                   // We'll implement this functionality in the ChildProfilesList component
-                }} 
+                }}
+                onViewChildDashboard={handleViewChildDashboard}
               />
             )}
           </CardContent>

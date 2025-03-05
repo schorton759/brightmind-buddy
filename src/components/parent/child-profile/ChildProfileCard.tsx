@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Copy, Info, Key, Trash2 } from 'lucide-react';
+import { Copy, ExternalLink, Info, Key, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { 
   AlertDialog, 
@@ -41,6 +41,7 @@ interface ChildProfileCardProps {
   onDelete: (childId: string) => Promise<void>;
   onCreateCredentials: (child: ChildProfile) => Promise<void>;
   onViewCredentials: (child: ChildProfile) => void;
+  onViewDashboard: (childId: string, username: string) => void;
   isCreatingCredentials: boolean;
   selectedChildId: string | null;
 }
@@ -49,7 +50,8 @@ const ChildProfileCard = ({
   child, 
   onDelete, 
   onCreateCredentials, 
-  onViewCredentials, 
+  onViewCredentials,
+  onViewDashboard,
   isCreatingCredentials, 
   selectedChildId 
 }: ChildProfileCardProps) => {
@@ -66,7 +68,18 @@ const ChildProfileCard = ({
   return (
     <Card key={child.id}>
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg">{child.username}</CardTitle>
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-lg">{child.username}</CardTitle>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex items-center gap-1"
+            onClick={() => onViewDashboard(child.id, child.username)}
+          >
+            <ExternalLink className="h-4 w-4" />
+            View Dashboard
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="pb-2">
         <div className="flex flex-col space-y-3">

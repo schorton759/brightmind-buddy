@@ -22,6 +22,8 @@ const Index = () => {
   const navigate = useNavigate();
   
   const [currentView, setCurrentView] = useState<string>('loading');
+  const [viewingChildId, setViewingChildId] = useState<string | null>(null);
+  const [viewingChildUsername, setViewingChildUsername] = useState<string>('');
   const { coachTip } = useCoachTip(profile?.age_group as AgeGroup);
   
   useEffect(() => {
@@ -69,11 +71,21 @@ const Index = () => {
   };
   
   const handleBack = () => {
-    if (profile?.user_type === 'parent' || user?.user_metadata?.user_type === 'parent') {
+    if (viewingChildId) {
+      setViewingChildId(null);
+      setViewingChildUsername('');
+      setCurrentView('parent-dashboard');
+    } else if (profile?.user_type === 'parent' || user?.user_metadata?.user_type === 'parent') {
       setCurrentView('parent-dashboard');
     } else {
       setCurrentView('dashboard');
     }
+  };
+
+  const handleViewChildDashboard = (childId: string, username: string) => {
+    setViewingChildId(childId);
+    setViewingChildUsername(username);
+    setCurrentView('dashboard');
   };
 
   if (currentView === 'loading' || authLoading) {
@@ -108,7 +120,7 @@ const Index = () => {
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.4 }}
             >
-              <ParentDashboard />
+              <ParentDashboard onViewChildDashboard={handleViewChildDashboard} />
             </motion.div>
           )}
           
@@ -120,11 +132,26 @@ const Index = () => {
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.4 }}
             >
-              <Dashboard 
-                ageGroup={profile?.age_group || ''} 
-                username={profile?.username || 'Buddy'} 
-                onNavigate={handleNavigate} 
-              />
+              {viewingChildId ? (
+                <>
+                  <div className="mb-4 bg-secondary/50 p-3 rounded-md">
+                    <p className="text-sm text-muted-foreground">
+                      You are viewing <span className="font-semibold">{viewingChildUsername}</span>'s dashboard as a parent
+                    </p>
+                  </div>
+                  <Dashboard 
+                    ageGroup={profile?.age_group || ''} 
+                    username={viewingChildUsername} 
+                    onNavigate={handleNavigate} 
+                  />
+                </>
+              ) : (
+                <Dashboard 
+                  ageGroup={profile?.age_group || ''} 
+                  username={profile?.username || 'Buddy'} 
+                  onNavigate={handleNavigate} 
+                />
+              )}
             </motion.div>
           )}
           

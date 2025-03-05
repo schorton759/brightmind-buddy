@@ -8,10 +8,12 @@ import { useChildProfiles } from './child-profile/useChildProfiles';
 
 const ChildProfilesList = ({ 
   refreshTrigger, 
-  onCreateCredentials 
+  onCreateCredentials,
+  onViewChildDashboard
 }: { 
   refreshTrigger: number;
-  onCreateCredentials: (childId: string) => void; 
+  onCreateCredentials: (childId: string) => void;
+  onViewChildDashboard: (childId: string, username: string) => void;
 }) => {
   const { 
     childProfiles,
@@ -43,6 +45,7 @@ const ChildProfilesList = ({
           onDelete={handleDeleteChild}
           onCreateCredentials={handleCreateCredentials}
           onViewCredentials={handleViewCredentials}
+          onViewDashboard={onViewChildDashboard}
           isCreatingCredentials={creatingCredentials}
           selectedChildId={selectedChild?.id || null}
         />
