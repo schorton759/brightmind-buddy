@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
 const fallbackOpenAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
@@ -16,10 +17,44 @@ serve(async (req) => {
   }
 
   try {
-    const { message, subject, ageGroup, apiKey } = await req.json();
+    const { message, subject, ageGroup, apiKey, userId, parentId } = await req.json();
     
-    // Use provided API key if available, otherwise fall back to environment variable
-    const openAIApiKey = apiKey || fallbackOpenAIApiKey;
+    // Create Supabase client
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: {
+          headers: { Authorization: req.headers.get('Authorization') ?? '' },
+        },
+      }
+    );
+    
+    // Check if we need to get the parent's API key
+    let openAIApiKey = apiKey;
+    
+    if (!openAIApiKey && parentId) {
+      // Try to get the parent's API key from parent_settings
+      console.log(`Trying to get API key from parent: ${parentId}`);
+      
+      const { data: parentSettings, error: parentSettingsError } = await supabaseClient
+        .from('parent_settings')
+        .select('openai_key')
+        .eq('parent_id', parentId)
+        .single();
+        
+      if (parentSettingsError && parentSettingsError.code !== 'PGRST116') {
+        console.error('Error fetching parent settings:', parentSettingsError);
+      }
+      
+      if (parentSettings?.openai_key) {
+        console.log('Using parent\'s API key');
+        openAIApiKey = parentSettings.openai_key;
+      }
+    }
+    
+    // Fall back to environment variable if no API key was found
+    openAIApiKey = openAIApiKey || fallbackOpenAIApiKey;
     
     if (!openAIApiKey) {
       return new Response(

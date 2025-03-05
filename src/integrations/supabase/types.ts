@@ -9,6 +9,44 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      child_app_settings: {
+        Row: {
+          child_id: string
+          created_at: string
+          habit_tracker_enabled: boolean
+          journal_enabled: boolean
+          tasks_enabled: boolean
+          tutors_enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          child_id: string
+          created_at?: string
+          habit_tracker_enabled?: boolean
+          journal_enabled?: boolean
+          tasks_enabled?: boolean
+          tutors_enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          child_id?: string
+          created_at?: string
+          habit_tracker_enabled?: boolean
+          journal_enabled?: boolean
+          tasks_enabled?: boolean
+          tutors_enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "child_app_settings_child_id_fkey"
+            columns: ["child_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coach_tips: {
         Row: {
           age_group: Database["public"]["Enums"]["age_group"] | null
@@ -157,6 +195,35 @@ export type Database = {
             foreignKeyName: "journal_entries_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parent_settings: {
+        Row: {
+          created_at: string
+          openai_key: string | null
+          parent_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          openai_key?: string | null
+          parent_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          openai_key?: string | null
+          parent_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parent_settings_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },

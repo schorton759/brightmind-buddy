@@ -26,7 +26,7 @@ export function UserMenu() {
     if (profile?.user_type === 'parent') {
       navigate('/parent-settings');
     } else {
-      navigate('/settings');
+      navigate('/profile');
     }
   };
 

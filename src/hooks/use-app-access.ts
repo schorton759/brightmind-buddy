@@ -1,73 +1,82 @@
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from './use-toast';
 
-export interface AppAccess {
-  tutorsEnabled: boolean;
-  habitTrackerEnabled: boolean;
-  journalEnabled: boolean;
-  tasksEnabled: boolean;
-  isLoading: boolean;
+interface AppAccess {
+  tutors: boolean;
+  habitTracker: boolean;
+  journalEntries: boolean;
+  taskManager: boolean;
 }
 
-export const useAppAccess = (childId?: string | null) => {
-  const { profile } = useAuth();
-  const [appAccess, setAppAccess] = useState<AppAccess>({
-    tutorsEnabled: true,
-    habitTrackerEnabled: true,
-    journalEnabled: true,
-    tasksEnabled: true,
-    isLoading: true
+export const useAppAccess = () => {
+  const [access, setAccess] = useState<AppAccess>({
+    tutors: true,
+    habitTracker: true,
+    journalEntries: true,
+    taskManager: true
   });
+  const [loading, setLoading] = useState(true);
+  const { user, profile } = useAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
-    const fetchAppAccess = async () => {
-      try {
-        const userId = childId || profile?.id;
+    if (user && profile?.user_type === 'child') {
+      fetchAppAccess();
+    } else {
+      // Parents have access to everything
+      setLoading(false);
+    }
+  }, [user, profile]);
+
+  const fetchAppAccess = async () => {
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase
+        .from('child_app_settings')
+        .select('*')
+        .eq('child_id', user?.id)
+        .single();
         
-        if (!userId) {
-          return;
-        }
-
-        const { data, error } = await supabase
-          .from('child_app_settings')
-          .select('*')
-          .eq('child_id', userId)
-          .single();
-
-        if (error && error.code !== 'PGRST116') {
-          console.error('Error fetching app access:', error);
-          return;
-        }
-
-        if (data) {
-          setAppAccess({
-            tutorsEnabled: data.tutors_enabled ?? true,
-            habitTrackerEnabled: data.habit_tracker_enabled ?? true,
-            journalEnabled: data.journal_enabled ?? true,
-            tasksEnabled: data.tasks_enabled ?? true,
-            isLoading: false
-          });
-        } else {
-          // Default all to enabled if no settings found
-          setAppAccess({
-            tutorsEnabled: true,
-            habitTrackerEnabled: true,
-            journalEnabled: true,
-            tasksEnabled: true,
-            isLoading: false
-          });
-        }
-      } catch (error) {
-        console.error('Error in useAppAccess:', error);
-      } finally {
-        setAppAccess(prev => ({ ...prev, isLoading: false }));
+      if (error && error.code !== 'PGRST116') { // PGRST116 is 'no rows returned' error
+        throw error;
       }
-    };
+      
+      if (data) {
+        setAccess({
+          tutors: data.tutors_enabled,
+          habitTracker: data.habit_tracker_enabled,
+          journalEntries: data.journal_enabled,
+          taskManager: data.tasks_enabled
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching app access:', error);
+      toast({
+        variant: "destructive",
+        title: "Error loading app access settings",
+        description: "Using default access settings."
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchAppAccess();
-  }, [profile, childId]);
+  const hasAccess = (app: keyof AppAccess): boolean => {
+    // If it's loading or profile is not a child, assume access is granted
+    if (loading || profile?.user_type !== 'child') {
+      return true;
+    }
+    
+    return access[app];
+  };
 
-  return appAccess;
+  return {
+    access,
+    loading,
+    hasAccess
+  };
 };

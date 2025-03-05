@@ -69,30 +69,34 @@ const ParentSettings = () => {
         if (profilesError) throw profilesError;
 
         // Get app access settings for each child
-        const { data: appSettings, error: appSettingsError } = await supabase
-          .from('child_app_settings')
-          .select('*')
-          .in('child_id', childIds);
+        if (profiles && profiles.length > 0) {
+          const { data: appSettings, error: appSettingsError } = await supabase
+            .from('child_app_settings')
+            .select('*')
+            .in('child_id', childIds);
+            
+          if (appSettingsError) throw appSettingsError;
           
-        if (appSettingsError) throw appSettingsError;
-        
-        // Combine profiles with their settings
-        const childrenWithAccess = profiles?.map(child => {
-          const settings = appSettings?.find(setting => setting.child_id === child.id);
+          // Combine profiles with their settings
+          const childrenWithAccess = profiles.map(child => {
+            const settings = appSettings?.find(setting => setting.child_id === child.id);
+            
+            return {
+              id: child.id,
+              username: child.username,
+              apps: {
+                tutors: settings?.tutors_enabled ?? true,
+                habitTracker: settings?.habit_tracker_enabled ?? true,
+                journalEntries: settings?.journal_enabled ?? true,
+                taskManager: settings?.tasks_enabled ?? true
+              }
+            };
+          });
           
-          return {
-            id: child.id,
-            username: child.username,
-            apps: {
-              tutors: settings?.tutors_enabled ?? true,
-              habitTracker: settings?.habit_tracker_enabled ?? true,
-              journalEntries: settings?.journal_enabled ?? true,
-              taskManager: settings?.tasks_enabled ?? true
-            }
-          };
-        });
-        
-        setChildProfiles(childrenWithAccess || []);
+          setChildProfiles(childrenWithAccess || []);
+        } else {
+          setChildProfiles([]);
+        }
       } else {
         setChildProfiles([]);
       }
@@ -132,13 +136,12 @@ const ParentSettings = () => {
     try {
       setIsUpdating(true);
       
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('parent_settings')
         .upsert({ 
           parent_id: profile?.id,
           openai_key: openAIKey
-        })
-        .select();
+        });
         
       if (error) throw error;
       
