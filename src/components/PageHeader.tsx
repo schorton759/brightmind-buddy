@@ -32,25 +32,24 @@ const PageHeader = ({ currentView, profile, onBack, onChangeAgeGroup }: PageHead
             BrightMind Buddy
           </h1>
         </motion.div>
-        {currentView !== 'age-select' && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="flex items-center space-x-4"
-          >
-            {profile?.user_type === 'child' && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={onChangeAgeGroup}
-              >
-                Change Age Group
-              </Button>
-            )}
-            <UserMenu />
-          </motion.div>
-        )}
+        
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="flex items-center space-x-4"
+        >
+          {profile?.user_type === 'child' && currentView !== 'age-select' && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={onChangeAgeGroup}
+            >
+              Change Age Group
+            </Button>
+          )}
+          <UserMenu />
+        </motion.div>
       </div>
     </header>
   );

@@ -4,12 +4,16 @@ import { motion } from 'framer-motion';
 import AgeGroupSelector from '@/components/AgeGroupSelector';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { Button } from './ui/button';
+import { LogOut } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 type AgeGroup = '8-10' | '10-12' | '13-15' | '15+';
 
 const UserAgeSelector = ({ onSelectComplete }: { onSelectComplete: () => void }) => {
-  const { profile, updateProfile, user } = useAuth();
+  const { profile, updateProfile, user, signOut } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isUpdatingAgeGroup, setIsUpdatingAgeGroup] = useState(false);
 
   const handleSelectAgeGroup = async (group: string) => {
@@ -36,6 +40,11 @@ const UserAgeSelector = ({ onSelectComplete }: { onSelectComplete: () => void })
     } finally {
       setIsUpdatingAgeGroup(false);
     }
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
   };
 
   return (
@@ -67,6 +76,17 @@ const UserAgeSelector = ({ onSelectComplete }: { onSelectComplete: () => void })
           onSelectGroup={handleSelectAgeGroup}
           isLoading={isUpdatingAgeGroup}
         />
+      </div>
+
+      <div className="mt-8">
+        <Button 
+          variant="outline" 
+          onClick={handleSignOut}
+          className="flex items-center gap-2"
+        >
+          <LogOut className="h-4 w-4" />
+          Log out
+        </Button>
       </div>
     </motion.div>
   );
