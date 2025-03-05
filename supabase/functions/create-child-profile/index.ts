@@ -16,24 +16,42 @@ serve(async (req) => {
   }
 
   try {
+    console.log("Create child profile function started");
+    
     // Create a Supabase client with the service role key
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
     
     if (!supabaseUrl || !supabaseServiceKey) {
       console.error("Missing environment variables: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
-      throw new Error("Server configuration error");
+      return new Response(
+        JSON.stringify({ error: "Server configuration error - missing environment variables" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
     
     // This client will bypass RLS
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     
     // Get the request body
-    const { username, age_group, parent_id } = await req.json() as CreateChildProfileRequest;
+    let requestData;
+    try {
+      requestData = await req.json() as CreateChildProfileRequest;
+      console.log("Request data:", JSON.stringify(requestData));
+    } catch (error) {
+      console.error("Error parsing request JSON:", error.message);
+      return new Response(
+        JSON.stringify({ error: "Invalid request format - could not parse JSON" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    const { username, age_group, parent_id } = requestData;
     
     if (!username || !age_group || !parent_id) {
+      console.error("Missing required fields:", { username, age_group, parent_id });
       return new Response(
-        JSON.stringify({ error: "Missing required fields" }),
+        JSON.stringify({ error: "Missing required fields: username, age_group, or parent_id" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

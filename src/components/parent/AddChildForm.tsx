@@ -65,14 +65,21 @@ const AddChildForm = ({ onComplete }: AddChildFormProps) => {
       setIsSubmitting(true);
       console.log("Starting child profile creation with values:", values);
       
+      // Prepare request payload
+      const payload = {
+        username: values.username,
+        age_group: values.age_group,
+        parent_id: user.id,
+      };
+      
+      console.log("Sending payload to edge function:", payload);
+      
       // Call the Supabase Edge Function to create the child profile
       const { data, error } = await supabase.functions.invoke('create-child-profile', {
-        body: {
-          username: values.username,
-          age_group: values.age_group,
-          parent_id: user.id,
-        },
+        body: payload,
       });
+      
+      console.log("Edge function response:", { data, error });
       
       if (error) {
         console.error('Edge function error:', error);
