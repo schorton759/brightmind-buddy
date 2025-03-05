@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -34,7 +33,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
 
   useEffect(() => {
-    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -45,7 +43,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       console.log("Auth state changed:", _event, session?.user?.id);
       setSession(session);
@@ -79,8 +76,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setProfile(data[0] as Profile);
       } else {
         console.log("No profile found, creating default profile");
-        // Create a default profile if none exists
-        // Make sure all required fields are provided
         const username = user?.user_metadata?.username || 'New User';
         const userType = (user?.user_metadata?.user_type as 'child' | 'parent') || 'child';
         const ageGroup = user?.user_metadata?.age_group as '8-10' | '10-12' | '13-15' | '15+' | null || null;
@@ -97,7 +92,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (insertError) {
           console.error('Error creating default profile:', insertError);
         } else {
-          // Fetch the newly created profile to ensure we have all fields
           const { data: newProfile, error: fetchError } = await supabase
             .from('profiles')
             .select('*')

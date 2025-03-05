@@ -18,19 +18,20 @@ import { Database } from '@/integrations/supabase/types';
 type AgeGroup = '8-10' | '10-12' | '13-15' | '15+';
 
 const Index = () => {
-  const { profile, isLoading, user } = useAuth();
+  const { profile, isLoading: authLoading, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   
   const [currentView, setCurrentView] = useState<string>('loading');
   const [coachTip, setCoachTip] = useState<string>('');
+  const [isUpdatingAgeGroup, setIsUpdatingAgeGroup] = useState(false);
   
   useEffect(() => {
     console.log("Index page - Profile state:", profile);
-    console.log("Index page - Loading state:", isLoading);
+    console.log("Index page - Loading state:", authLoading);
     console.log("Index page - User state:", user);
     
-    if (!isLoading) {
+    if (!authLoading) {
       if (profile) {
         if (profile.user_type === 'child' && profile.age_group) {
           setCurrentView('dashboard');
@@ -51,7 +52,7 @@ const Index = () => {
         }
       }
     }
-  }, [profile, isLoading, user]);
+  }, [profile, authLoading, user]);
   
   const fetchCoachTip = async (ageGroup: AgeGroup) => {
     try {
@@ -77,24 +78,39 @@ const Index = () => {
   };
   
   const handleSelectAgeGroup = async (group: string) => {
-    if (!profile) return;
+    if (!user || isUpdatingAgeGroup) return;
+    
+    setIsUpdatingAgeGroup(true);
     
     try {
+      console.log(`Updating age group to ${group} for user ID: ${user.id}`);
+      
       const { error } = await supabase
         .from('profiles')
         .update({ age_group: group as AgeGroup })
-        .eq('id', profile.id);
+        .eq('id', user.id);
         
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating age group:', error);
+        throw error;
+      }
       
-      // Force reload profile by refreshing the page
+      toast({
+        title: "Age group updated!",
+        description: "Your profile has been updated successfully.",
+      });
+      
+      // Reload the page to refresh the profile data
       window.location.reload();
     } catch (error: any) {
+      console.error('Failed to update age group:', error);
       toast({
         variant: "destructive",
         title: "Failed to update age group",
-        description: error.message,
+        description: error.message || "Please try again later.",
       });
+    } finally {
+      setIsUpdatingAgeGroup(false);
     }
   };
   
@@ -107,7 +123,7 @@ const Index = () => {
   };
 
   // Loading state
-  if (currentView === 'loading' || isLoading) {
+  if (currentView === 'loading' || authLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
@@ -185,7 +201,8 @@ const Index = () => {
               <div className="w-full">
                 <AgeGroupSelector 
                   selectedGroup={profile?.age_group || ''} 
-                  onSelectGroup={handleSelectAgeGroup} 
+                  onSelectGroup={handleSelectAgeGroup}
+                  isLoading={isUpdatingAgeGroup}
                 />
               </div>
             </motion.div>
