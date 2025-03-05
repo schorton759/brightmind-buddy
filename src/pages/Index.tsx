@@ -49,14 +49,18 @@ const Index = () => {
             setCurrentView('age-select');
           }
         }
-      } else {
+      } else if (userType) {
         // If no profile exists yet but we have user metadata, use that to determine the view
         if (userType === 'parent') {
           setCurrentView('parent-dashboard');
-        } else {
-          // Default to age selection for child accounts
+        } else if (userType === 'child') {
+          // Default to age selection for child accounts without profiles
           setCurrentView('age-select');
         }
+      } else {
+        // If no profile and no metadata indicating user type, default to age selection
+        // This is a fallback and ideally should not happen
+        setCurrentView('age-select');
       }
     }
   }, [profile, authLoading, user, navigate]);
