@@ -27,6 +27,7 @@ const Index = () => {
     console.log("Index page - Profile state:", profile);
     console.log("Index page - Loading state:", authLoading);
     console.log("Index page - User state:", user);
+    console.log("Index page - User metadata:", user?.user_metadata);
     
     if (!authLoading) {
       if (!user) {
@@ -35,11 +36,19 @@ const Index = () => {
         return;
       }
       
-      // Check user metadata for user_type
+      // First check if user is a parent based on metadata - this takes precedence
       const userType = user.user_metadata?.user_type;
       
+      if (userType === 'parent') {
+        // If user metadata says this is a parent, go directly to parent dashboard
+        console.log("User is a parent based on metadata - showing parent dashboard");
+        setCurrentView('parent-dashboard');
+        return;
+      }
+      
+      // Then check profile if we have one
       if (profile) {
-        // If profile exists, use the user_type from profile
+        console.log("Using profile data for routing, user_type:", profile.user_type);
         if (profile.user_type === 'parent') {
           setCurrentView('parent-dashboard');
         } else if (profile.user_type === 'child') {
@@ -49,17 +58,13 @@ const Index = () => {
             setCurrentView('age-select');
           }
         }
-      } else if (userType) {
-        // If no profile exists yet but we have user metadata, use that to determine the view
-        if (userType === 'parent') {
-          setCurrentView('parent-dashboard');
-        } else if (userType === 'child') {
-          // Default to age selection for child accounts without profiles
-          setCurrentView('age-select');
-        }
+      } else if (userType === 'child') {
+        // If no profile but metadata says it's a child
+        console.log("User is a child based on metadata - showing age selection");
+        setCurrentView('age-select');
       } else {
-        // If no profile and no metadata indicating user type, default to age selection
-        // This is a fallback and ideally should not happen
+        // Fallback when we have no way to determine user type
+        console.log("No profile or metadata user type - defaulting to age selection");
         setCurrentView('age-select');
       }
     }
