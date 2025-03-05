@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AgeGroupSelector from '@/components/AgeGroupSelector';
@@ -19,7 +18,7 @@ import { Database } from '@/integrations/supabase/types';
 type AgeGroup = '8-10' | '10-12' | '13-15' | '15+';
 
 const Index = () => {
-  const { profile, isLoading: authLoading, user } = useAuth();
+  const { profile, isLoading: authLoading, user, updateProfile } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -86,34 +85,9 @@ const Index = () => {
     try {
       console.log(`Updating age group to ${group} for user ID: ${user.id}`);
       
-      const { error } = await supabase
-        .from('profiles')
-        .update({ age_group: group as AgeGroup })
-        .eq('id', user.id);
-        
-      if (error) {
-        console.error('Error updating age group:', error);
-        throw error;
-      }
+      const updatedProfile = await updateProfile({ age_group: group as AgeGroup });
       
-      toast({
-        title: "Age group updated!",
-        description: "Your profile has been updated successfully.",
-      });
-      
-      // Fetch the updated profile instead of reloading the page
-      const { data: updatedProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-        
-      if (profileError) {
-        console.error('Error fetching updated profile:', profileError);
-      } else if (updatedProfile) {
-        // Update local state with new profile data
-        console.log("Updated profile:", updatedProfile);
-        
+      if (updatedProfile) {
         // Set view to dashboard
         setCurrentView('dashboard');
         

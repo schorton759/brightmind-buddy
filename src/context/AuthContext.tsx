@@ -21,6 +21,7 @@ type AuthContextType = {
   signUp: (email: string, password: string, username: string, userType: 'child' | 'parent', ageGroup?: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  updateProfile: (data: Partial<Omit<Profile, 'id' | 'created_at' | 'updated_at'>>) => Promise<Profile | null>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -210,6 +211,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateProfile = async (data: Partial<Omit<Profile, 'id' | 'created_at' | 'updated_at'>>) => {
+    try {
+      if (!user) {
+        throw new Error('No user is currently signed in');
+      }
+      
+      setIsLoading(true);
+      console.log("Updating profile with data:", data);
+      
+      const { data: updatedProfile, error } = await supabase
+        .from('profiles')
+        .update(data)
+        .eq('id', user.id)
+        .select('*')
+        .single();
+        
+      if (error) {
+        console.error('Error updating profile:', error);
+        throw error;
+      }
+      
+      console.log("Updated profile:", updatedProfile);
+      setProfile(updatedProfile as Profile);
+      
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been updated successfully.",
+      });
+      
+      return updatedProfile as Profile;
+    } catch (error: any) {
+      console.error('Error in updateProfile:', error);
+      toast({
+        variant: "destructive",
+        title: "Failed to update profile",
+        description: error.message || "Please try again later.",
+      });
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -220,6 +264,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signUp,
         signIn,
         signOut,
+        updateProfile,
       }}
     >
       {children}

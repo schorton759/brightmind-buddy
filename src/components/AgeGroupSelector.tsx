@@ -30,7 +30,14 @@ const AgeGroupSelector = ({
   const handleSelectGroup = (groupId: string) => {
     if (isLoading) return;
     
+    // Immediately call the parent component's handler
     onSelectGroup(groupId);
+    
+    // Show toast notification
+    toast({
+      title: "Age group selected",
+      description: "Updating your profile...",
+    });
   };
 
   return (
