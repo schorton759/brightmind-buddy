@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AgeGroupSelector from '@/components/AgeGroupSelector';
@@ -19,7 +18,7 @@ import { Database } from '@/integrations/supabase/types';
 type AgeGroup = '8-10' | '10-12' | '13-15' | '15+';
 
 const Index = () => {
-  const { profile, isLoading } = useAuth();
+  const { profile, isLoading, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -27,6 +26,10 @@ const Index = () => {
   const [coachTip, setCoachTip] = useState<string>('');
   
   useEffect(() => {
+    console.log("Index page - Profile state:", profile);
+    console.log("Index page - Loading state:", isLoading);
+    console.log("Index page - User state:", user);
+    
     if (!isLoading) {
       if (profile) {
         if (profile.user_type === 'child' && profile.age_group) {
@@ -38,9 +41,17 @@ const Index = () => {
           // Parent view
           setCurrentView('dashboard');
         }
+      } else {
+        // If profile is null but user exists, we need to select age group
+        if (user) {
+          setCurrentView('age-select');
+        } else {
+          // This shouldn't happen due to ProtectedRoute, but just in case
+          navigate('/auth');
+        }
       }
     }
-  }, [profile, isLoading]);
+  }, [profile, isLoading, user]);
   
   const fetchCoachTip = async (ageGroup: AgeGroup) => {
     try {
@@ -98,8 +109,9 @@ const Index = () => {
   // Loading state
   if (currentView === 'loading' || isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
+        <p className="text-sm text-muted-foreground">Loading your profile...</p>
       </div>
     );
   }

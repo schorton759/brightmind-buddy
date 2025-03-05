@@ -67,8 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', userId)
-        .single();
+        .eq('id', userId);
 
       if (error) {
         console.error('Error fetching user profile:', error);
@@ -76,7 +75,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       console.log("Profile data:", data);
-      setProfile(data as Profile);
+      if (data && data.length > 0) {
+        setProfile(data[0] as Profile);
+      } else {
+        console.log("No profile found, creating default profile");
+        // Create a default profile if none exists
+        const defaultProfile: Partial<Profile> = {
+          id: userId,
+          username: user?.user_metadata?.username || 'New User',
+          user_type: (user?.user_metadata?.user_type as 'child' | 'parent') || 'child',
+          age_group: user?.user_metadata?.age_group as '8-10' | '10-12' | '13-15' | '15+' | null || null
+        };
+        
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert([defaultProfile]);
+          
+        if (insertError) {
+          console.error('Error creating default profile:', insertError);
+        } else {
+          setProfile(defaultProfile as Profile);
+        }
+      }
     } catch (error: any) {
       console.error('Error in fetchUserProfile:', error.message);
     } finally {
