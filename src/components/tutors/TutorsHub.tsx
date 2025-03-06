@@ -3,7 +3,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Book, Calculator, Flask } from 'lucide-react'; // Adding icons instead of relying on missing images
+import { Book, Calculator, TestTube } from 'lucide-react';
 
 interface TutorCardProps {
   title: string;
@@ -59,7 +59,7 @@ const TutorsHub: React.FC = () => {
         <TutorCard 
           title="Science Tutor" 
           description="Learn about science topics, experiments, and more"
-          icon={<Flask className="h-16 w-16" />}
+          icon={<TestTube className="h-16 w-16" />}
           onClick={() => navigate('/tutors/science')}
         />
       </div>
