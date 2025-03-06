@@ -24,7 +24,7 @@ export const useTaskAchievements = (tasks: Task[]) => {
     if (taskAchievement) {
       updateAchievementProgress('complete-3-tasks', completedTasks);
     }
-  }, [tasks, achievements]);
+  }, [tasks, achievements, updateAchievementProgress]);
 
   return null; // This hook doesn't need to return anything as it works via side effects
 };

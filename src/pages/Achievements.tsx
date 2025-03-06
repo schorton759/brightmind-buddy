@@ -16,6 +16,7 @@ const Achievements = () => {
         currentView="child-dashboard" 
         profile={profile} 
         onBack={() => window.history.back()} 
+        onChangeAgeGroup={() => {}} // Adding the missing prop
       />
       
       <main className="max-w-4xl mx-auto py-8 px-4">

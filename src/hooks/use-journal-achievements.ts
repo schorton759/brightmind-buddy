@@ -2,19 +2,27 @@
 import { useEffect } from 'react';
 import { useAchievements } from './use-achievements';
 
-export const useJournalAchievements = (hasEntry: boolean) => {
+type JournalEntry = {
+  id: string;
+  content: string;
+  created_at: string;
+};
+
+export const useJournalAchievements = (journalEntries: JournalEntry[]) => {
   const { achievements, unlockAchievement } = useAchievements();
 
   // Track journal-related achievements
   useEffect(() => {
-    if (!hasEntry || !achievements.length) return;
+    if (!journalEntries.length || !achievements.length) return;
 
-    // Check for "First Journal" achievement
-    const journalAchievement = achievements.find(a => a.id === 'first-journal');
-    if (journalAchievement && !journalAchievement.unlocked) {
-      unlockAchievement('first-journal');
+    // Check for "First Journal Entry" achievement
+    if (journalEntries.length > 0) {
+      const firstJournalAchievement = achievements.find(a => a.id === 'first-journal');
+      if (firstJournalAchievement && !firstJournalAchievement.unlocked) {
+        unlockAchievement('first-journal');
+      }
     }
-  }, [hasEntry, achievements]);
+  }, [journalEntries, achievements, unlockAchievement]);
 
   return null; // This hook doesn't need to return anything as it works via side effects
 };

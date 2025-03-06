@@ -93,7 +93,7 @@ export const useAchievements = () => {
         if (userAchievement) {
           return {
             ...achievement,
-            unlocked: true,
+            unlocked: !!userAchievement.unlocked_at,
             unlockedAt: userAchievement.unlocked_at ? new Date(userAchievement.unlocked_at) : undefined,
             progress: userAchievement.progress || achievement.progress
           };
@@ -187,7 +187,7 @@ export const useAchievements = () => {
           user_id: profile?.id,
           achievement_id: achievementId,
           progress,
-          unlocked_at: shouldUnlock ? new Date().toISOString() : undefined
+          unlocked_at: shouldUnlock ? new Date().toISOString() : null
         });
         
       if (error) throw error;

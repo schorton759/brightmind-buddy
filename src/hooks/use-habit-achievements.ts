@@ -10,7 +10,7 @@ type Habit = {
 };
 
 export const useHabitAchievements = (habits: Habit[]) => {
-  const { achievements, unlockAchievement, updateAchievementProgress } = useAchievements();
+  const { achievements, unlockAchievement } = useAchievements();
 
   // Track habit-related achievements
   useEffect(() => {
@@ -40,7 +40,7 @@ export const useHabitAchievements = (habits: Habit[]) => {
         unlockAchievement('habit-streak-7');
       }
     }
-  }, [habits, achievements]);
+  }, [habits, achievements, unlockAchievement]);
 
   return null; // This hook doesn't need to return anything as it works via side effects
 };
