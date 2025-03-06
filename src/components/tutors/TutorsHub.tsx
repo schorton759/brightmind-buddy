@@ -1,25 +1,24 @@
+
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Link } from 'react-router-dom';
+import { Book, Calculator, Flask } from 'lucide-react'; // Adding icons instead of relying on missing images
 
 interface TutorCardProps {
   title: string;
   description: string;
-  imageSrc: string;
+  icon: React.ReactNode;
   onClick: () => void;
 }
 
-const TutorCard: React.FC<TutorCardProps> = ({ title, description, imageSrc, onClick }) => {
+const TutorCard: React.FC<TutorCardProps> = ({ title, description, icon, onClick }) => {
   return (
     <Card className="overflow-hidden transition-all hover:shadow-md">
-      <div className="aspect-video w-full overflow-hidden bg-muted">
-        <img 
-          src={imageSrc} 
-          alt={title} 
-          className="h-full w-full object-cover" 
-        />
+      <div className="aspect-video w-full overflow-hidden bg-muted flex items-center justify-center">
+        <div className="text-4xl text-primary">
+          {icon}
+        </div>
       </div>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
@@ -48,19 +47,19 @@ const TutorsHub: React.FC = () => {
         <TutorCard 
           title="Math Tutor" 
           description="Get help with math concepts, problem-solving, and more"
-          imageSrc="/tutors/math-tutor.png"
+          icon={<Calculator className="h-16 w-16" />}
           onClick={() => navigate('/tutors/math')}
         />
         <TutorCard 
           title="Language Tutor" 
           description="Improve reading, writing, vocabulary, and grammar"
-          imageSrc="/tutors/language-tutor.png" 
+          icon={<Book className="h-16 w-16" />} 
           onClick={() => navigate('/tutors/language')}
         />
         <TutorCard 
           title="Science Tutor" 
           description="Learn about science topics, experiments, and more"
-          imageSrc="/tutors/science-tutor.png"
+          icon={<Flask className="h-16 w-16" />}
           onClick={() => navigate('/tutors/science')}
         />
       </div>
