@@ -2,7 +2,7 @@
 import React from 'react';
 import { ArrowLeftCircle } from 'lucide-react';
 import { Button } from './ui/button';
-import UserMenu from './UserMenu';
+import { UserMenu } from './UserMenu';
 import { useAuth } from '@/context/AuthContext';
 import { Profile } from '@/types/auth';
 import NotificationIcon from './notifications/NotificationIcon';
