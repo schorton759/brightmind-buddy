@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { useTaskAchievements } from '@/hooks/use-task-achievements';
+import { useNotifications } from '@/context/NotificationContext';
+import { useToast } from '@/hooks/use-toast';
 
 type Task = {
   id: string;
@@ -25,6 +27,12 @@ const TaskManager = () => {
 
   // Use our achievements hook
   useTaskAchievements(tasks);
+  
+  // Use notifications
+  const { addNotification } = useNotifications();
+  
+  // Use toast
+  const { toast } = useToast();
 
   const addTask = () => {
     if (newTask.trim() === '') return;
@@ -38,16 +46,61 @@ const TaskManager = () => {
     
     setTasks([...tasks, task]);
     setNewTask('');
+    
+    // Show toast for feedback
+    toast({
+      title: "Task Created",
+      description: `New ${newPriority} priority task has been added.`,
+    });
+    
+    // If high priority, show a notification
+    if (newPriority === 'high') {
+      addNotification(
+        'task',
+        'High Priority Task',
+        `You've added a high priority task: ${newTask}`,
+        task.id
+      );
+    }
   };
 
   const toggleTask = (id: string) => {
-    setTasks(tasks.map(task => 
-      task.id === id ? { ...task, completed: !task.completed } : task
-    ));
+    setTasks(tasks.map(task => {
+      if (task.id === id) {
+        const newCompleted = !task.completed;
+        
+        // If completing a task, show a notification
+        if (newCompleted) {
+          addNotification(
+            'task',
+            'Task Completed!',
+            `You've completed "${task.title}" - great job!`,
+            task.id
+          );
+          
+          // Show toast for feedback
+          toast({
+            title: "Task Completed",
+            description: `"${task.title}" has been marked as completed.`,
+          });
+        }
+        
+        return { ...task, completed: newCompleted };
+      }
+      return task;
+    }));
   };
 
   const deleteTask = (id: string) => {
+    const taskToDelete = tasks.find(task => task.id === id);
     setTasks(tasks.filter(task => task.id !== id));
+    
+    if (taskToDelete) {
+      toast({
+        title: "Task Deleted",
+        description: `"${taskToDelete.title}" has been removed.`,
+      });
+    }
   };
 
   const priorityColors = {

@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
 import Index from './pages/Index';
 import Auth from './pages/Auth';
 import Profile from './pages/Profile';
@@ -34,63 +35,65 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const App = () => {
   return (
     <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/auth" element={<Auth />} />
-          <Route
-            path="/"
-            element={
+      <NotificationProvider>
+        <Router>
+          <Routes>
+            <Route path="/auth" element={<Auth />} />
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <Index />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/age-select"
+              element={
+                <ProtectedRoute>
+                  <AgeSelect />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/parent-settings"
+              element={
+                <ProtectedRoute>
+                  <ParentSettings />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/tutors/math" element={
               <ProtectedRoute>
-                <Index />
+                <MathTutor />
               </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
+            } />
+            <Route path="/tutors/language" element={
               <ProtectedRoute>
-                <Profile />
+                <LanguageTutor />
               </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/age-select"
-            element={
+            } />
+            <Route path="/tutors/science" element={
               <ProtectedRoute>
-                <AgeSelect />
+                <ScienceTutor />
               </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/parent-settings"
-            element={
+            } />
+            <Route path="/achievements" element={
               <ProtectedRoute>
-                <ParentSettings />
+                <Achievements />
               </ProtectedRoute>
-            }
-          />
-          <Route path="/tutors/math" element={
-            <ProtectedRoute>
-              <MathTutor />
-            </ProtectedRoute>
-          } />
-          <Route path="/tutors/language" element={
-            <ProtectedRoute>
-              <LanguageTutor />
-            </ProtectedRoute>
-          } />
-          <Route path="/tutors/science" element={
-            <ProtectedRoute>
-              <ScienceTutor />
-            </ProtectedRoute>
-          } />
-          <Route path="/achievements" element={
-            <ProtectedRoute>
-              <Achievements />
-            </ProtectedRoute>
-          } />
-        </Routes>
-      </Router>
+            } />
+          </Routes>
+        </Router>
+      </NotificationProvider>
     </AuthProvider>
   );
 };

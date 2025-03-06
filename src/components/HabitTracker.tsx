@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { useHabitAchievements } from '@/hooks/use-habit-achievements';
+import { useNotifications } from '@/context/NotificationContext';
+import { useToast } from '@/hooks/use-toast';
 
 type Habit = {
   id: string;
@@ -24,6 +26,12 @@ const HabitTracker = () => {
   
   // Use our achievements hook
   useHabitAchievements(habits);
+  
+  // Use notifications
+  const { addNotification } = useNotifications();
+  
+  // Use toast
+  const { toast } = useToast();
 
   const addHabit = () => {
     if (newHabit.trim() === '') return;
@@ -37,18 +45,52 @@ const HabitTracker = () => {
     
     setHabits([...habits, habit]);
     setNewHabit('');
+    
+    // Show toast for feedback
+    toast({
+      title: "Habit Created",
+      description: `New habit "${newHabit}" has been added.`,
+    });
   };
 
   const toggleHabit = (id: string) => {
-    setHabits(habits.map(habit => 
-      habit.id === id 
-        ? { ...habit, completed: !habit.completed, streak: !habit.completed ? habit.streak + 1 : habit.streak - 1 } 
-        : habit
-    ));
+    setHabits(habits.map(habit => {
+      if (habit.id === id) {
+        const newCompleted = !habit.completed;
+        const newStreak = newCompleted ? habit.streak + 1 : habit.streak - 1;
+        
+        // If completing a habit, show a notification
+        if (newCompleted) {
+          addNotification(
+            'habit',
+            'Habit Completed!',
+            `You've completed "${habit.name}" - keep up the good work!`,
+            habit.id
+          );
+          
+          // Show toast for feedback
+          toast({
+            title: "Habit Completed",
+            description: `Streak for "${habit.name}" is now ${newStreak}.`,
+          });
+        }
+        
+        return { ...habit, completed: newCompleted, streak: newStreak };
+      }
+      return habit;
+    }));
   };
 
   const deleteHabit = (id: string) => {
+    const habitToDelete = habits.find(habit => habit.id === id);
     setHabits(habits.filter(habit => habit.id !== id));
+    
+    if (habitToDelete) {
+      toast({
+        title: "Habit Deleted",
+        description: `"${habitToDelete.name}" has been removed.`,
+      });
+    }
   };
 
   return (
