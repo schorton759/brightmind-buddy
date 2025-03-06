@@ -5,6 +5,7 @@ import { Check, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { useTaskAchievements } from '@/hooks/use-task-achievements';
 
 type Task = {
   id: string;
@@ -21,6 +22,9 @@ const TaskManager = () => {
   ]);
   const [newTask, setNewTask] = useState('');
   const [newPriority, setNewPriority] = useState<Task['priority']>('medium');
+
+  // Use our achievements hook
+  useTaskAchievements(tasks);
 
   const addTask = () => {
     if (newTask.trim() === '') return;

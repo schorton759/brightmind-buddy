@@ -1,25 +1,21 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '@/context/AuthContext';
 import Dashboard from '@/components/Dashboard';
 import HabitTracker from '@/components/HabitTracker';
-import JournalEntry from '@/components/JournalEntry';
 import TaskManager from '@/components/TaskManager';
+import JournalEntry from '@/components/JournalEntry';
 import TutorsHub from '@/components/tutors/TutorsHub';
-import MathTutor from '@/components/tutors/MathTutor';
-import LanguageTutor from '@/components/tutors/LanguageTutor';
-import ScienceTutor from '@/components/tutors/ScienceTutor';
 import ParentDashboard from '@/components/parent/ParentDashboard';
-import UserAgeSelector from '@/components/UserAgeSelector';
-import { Profile } from '@/types/auth';
+import AchievementsDashboard from '@/components/achievements/AchievementsDashboard';
 
-type ViewSelectorProps = {
+interface ViewSelectorProps {
   currentView: string;
-  profile: Profile | null;
+  profile: any;
   viewingChildId: string | null;
-  viewingChildUsername: string;
+  viewingChildUsername: string | null;
   onNavigate: (page: string) => void;
-  onViewChildDashboard: (childId: string, username: string) => void;
-};
+  onViewChildDashboard: (childId: string, childUsername: string) => void;
+}
 
 const ViewSelector = ({
   currentView,
@@ -29,139 +25,36 @@ const ViewSelector = ({
   onNavigate,
   onViewChildDashboard
 }: ViewSelectorProps) => {
+
+  const handleNavigate = (page: string) => {
+    onNavigate(page);
+  };
+
+  const renderView = () => {
+    switch (currentView) {
+      case 'child-dashboard':
+        return <Dashboard ageGroup={profile?.age_group} username={profile?.username} onNavigate={handleNavigate} />;
+      case 'habits':
+        return <HabitTracker />;
+      case 'tasks':
+        return <TaskManager />;
+      case 'journal':
+        return <JournalEntry ageGroup={profile?.age_group} />;
+      case 'achievements':
+        return <AchievementsDashboard />;
+      case 'tutors':
+        return <TutorsHub />;
+      case 'parent-dashboard':
+        return <ParentDashboard onViewChildDashboard={onViewChildDashboard} />;
+      default:
+        return null;
+    }
+  };
+
   return (
-    <AnimatePresence mode="wait">
-      {currentView === 'age-select' && (
-        <UserAgeSelector onSelectComplete={() => onNavigate('dashboard')} />
-      )}
-      
-      {currentView === 'parent-dashboard' && (
-        <motion.div
-          key="parent-dashboard"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.4 }}
-        >
-          <ParentDashboard onViewChildDashboard={onViewChildDashboard} />
-        </motion.div>
-      )}
-      
-      {currentView === 'dashboard' && (
-        <motion.div
-          key="dashboard"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.4 }}
-        >
-          {viewingChildId ? (
-            <>
-              <div className="mb-4 bg-secondary/50 p-3 rounded-md">
-                <p className="text-sm text-muted-foreground">
-                  You are viewing <span className="font-semibold">{viewingChildUsername}</span>'s dashboard as a parent
-                </p>
-              </div>
-              <Dashboard 
-                ageGroup={profile?.age_group || ''} 
-                username={viewingChildUsername} 
-                onNavigate={onNavigate} 
-              />
-            </>
-          ) : (
-            <Dashboard 
-              ageGroup={profile?.age_group || ''} 
-              username={profile?.username || 'Buddy'} 
-              onNavigate={onNavigate} 
-            />
-          )}
-        </motion.div>
-      )}
-      
-      {currentView === 'habits' && (
-        <motion.div
-          key="habits"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.4 }}
-        >
-          <HabitTracker />
-        </motion.div>
-      )}
-      
-      {currentView === 'journal' && (
-        <motion.div
-          key="journal"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.4 }}
-        >
-          <JournalEntry ageGroup={profile?.age_group || ''} />
-        </motion.div>
-      )}
-      
-      {currentView === 'tasks' && (
-        <motion.div
-          key="tasks"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.4 }}
-        >
-          <TaskManager />
-        </motion.div>
-      )}
-      
-      {currentView === 'tutors' && (
-        <motion.div
-          key="tutors"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.4 }}
-        >
-          <TutorsHub />
-        </motion.div>
-      )}
-      
-      {currentView === 'math-tutor' && (
-        <motion.div
-          key="math-tutor"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.4 }}
-        >
-          <MathTutor />
-        </motion.div>
-      )}
-      
-      {currentView === 'language-tutor' && (
-        <motion.div
-          key="language-tutor"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.4 }}
-        >
-          <LanguageTutor />
-        </motion.div>
-      )}
-      
-      {currentView === 'science-tutor' && (
-        <motion.div
-          key="science-tutor"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.4 }}
-        >
-          <ScienceTutor />
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <div>
+      {renderView()}
+    </div>
   );
 };
 

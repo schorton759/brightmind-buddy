@@ -42,7 +42,7 @@ const Dashboard = ({ ageGroup, username, onNavigate }: DashboardProps) => {
     { id: 'habits', label: 'Habits', icon: <Activity className="h-5 w-5" />, color: 'bg-purple-50 text-purple-600' },
     { id: 'journal', label: 'Journal', icon: <BookOpen className="h-5 w-5" />, color: 'bg-blue-50 text-blue-600' },
     { id: 'tasks', label: 'Tasks', icon: <ListTodo className="h-5 w-5" />, color: 'bg-green-50 text-green-600' },
-    { id: 'rewards', label: 'Rewards', icon: <Award className="h-5 w-5" />, color: 'bg-amber-50 text-amber-600', disabled: true },
+    { id: 'achievements', label: 'Achievements', icon: <Award className="h-5 w-5" />, color: 'bg-amber-50 text-amber-600' },
     { id: 'calendar', label: 'Calendar', icon: <Calendar className="h-5 w-5" />, color: 'bg-red-50 text-red-600', disabled: true },
     { id: 'parents', label: 'Parents', icon: <Users className="h-5 w-5" />, color: 'bg-teal-50 text-teal-600', disabled: true },
     { id: 'settings', label: 'Settings', icon: <Settings className="h-5 w-5" />, color: 'bg-gray-50 text-gray-600', disabled: true },

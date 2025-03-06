@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -9,6 +10,7 @@ import ParentSettings from './pages/ParentSettings';
 import MathTutor from '@/components/tutors/MathTutor';
 import LanguageTutor from '@/components/tutors/LanguageTutor';
 import ScienceTutor from '@/components/tutors/ScienceTutor';
+import Achievements from '@/pages/Achievements';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, isLoading } = useAuth();
@@ -80,6 +82,11 @@ const App = () => {
           <Route path="/tutors/science" element={
             <ProtectedRoute>
               <ScienceTutor />
+            </ProtectedRoute>
+          } />
+          <Route path="/achievements" element={
+            <ProtectedRoute>
+              <Achievements />
             </ProtectedRoute>
           } />
         </Routes>

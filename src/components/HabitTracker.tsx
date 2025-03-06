@@ -5,6 +5,7 @@ import { Check, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { useHabitAchievements } from '@/hooks/use-habit-achievements';
 
 type Habit = {
   id: string;
@@ -20,6 +21,9 @@ const HabitTracker = () => {
     { id: '3', name: 'Do homework', streak: 7, completed: false },
   ]);
   const [newHabit, setNewHabit] = useState('');
+  
+  // Use our achievements hook
+  useHabitAchievements(habits);
 
   const addHabit = () => {
     if (newHabit.trim() === '') return;
