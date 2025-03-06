@@ -18,6 +18,7 @@ export function useTutorChat({ subject, ageGroup, parentApiKey }: UseTutorChatPr
   const { hasAccess } = useAppAccess();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Scroll to bottom when messages change
@@ -31,6 +32,9 @@ export function useTutorChat({ subject, ageGroup, parentApiKey }: UseTutorChatPr
 
   const sendMessage = async (message: string) => {
     if (!message.trim()) return;
+    
+    // Clear any previous errors
+    setError(null);
     
     // Check app access for child users
     if (profile?.user_type === 'child' && !hasAccess('tutors')) {
@@ -55,7 +59,7 @@ export function useTutorChat({ subject, ageGroup, parentApiKey }: UseTutorChatPr
     
     try {
       // Call Supabase Edge Function
-      const { data, error } = await supabase.functions.invoke('subject-tutor', {
+      const { data, error: functionError } = await supabase.functions.invoke('subject-tutor', {
         body: {
           userId: profile?.id,
           message: userMessage.content,
@@ -65,14 +69,15 @@ export function useTutorChat({ subject, ageGroup, parentApiKey }: UseTutorChatPr
         }
       });
       
-      if (error) throw error;
+      if (functionError) {
+        console.error('Error sending message to tutor:', functionError);
+        setError("Failed to connect to the tutor service. Please try again.");
+        return;
+      }
       
       if (data.error) {
-        toast({
-          variant: "destructive",
-          title: "Tutor Error",
-          description: data.error
-        });
+        console.error('Tutor service returned an error:', data.error);
+        setError(data.error);
         return;
       }
       
@@ -87,6 +92,8 @@ export function useTutorChat({ subject, ageGroup, parentApiKey }: UseTutorChatPr
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
       console.error('Error sending message to tutor:', error);
+      setError("An unexpected error occurred. Please try again later.");
+      
       toast({
         variant: "destructive",
         title: "Error",
@@ -101,6 +108,7 @@ export function useTutorChat({ subject, ageGroup, parentApiKey }: UseTutorChatPr
     messages,
     isProcessing,
     sendMessage,
-    messagesEndRef
+    messagesEndRef,
+    error
   };
 }

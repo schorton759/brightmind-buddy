@@ -28,6 +28,7 @@ serve(async (req) => {
     const OPENAI_API_KEY = apiKey || Deno.env.get('OPENAI_API_KEY')
     
     if (!OPENAI_API_KEY) {
+      console.log('OpenAI API key missing for user:', userId);
       return new Response(
         JSON.stringify({ error: 'OpenAI API key not configured. Please add it in the parent settings.' }),
         { 
