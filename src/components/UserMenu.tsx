@@ -12,10 +12,19 @@ import { useAuth } from "@/context/AuthContext";
 import { UserAvatar } from "./UserAvatar";
 import { Settings, LogOut, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Profile } from "@/types/auth";
 
-export function UserMenu() {
-  const { profile, user, signOut } = useAuth();
+interface UserMenuProps {
+  profile?: Profile | null;
+  onChangeAgeGroup?: () => void;
+}
+
+export function UserMenu({ profile: propProfile, onChangeAgeGroup }: UserMenuProps = {}) {
+  const { profile: contextProfile, user, signOut } = useAuth();
   const navigate = useNavigate();
+  
+  // Use the profile from props if provided, otherwise use the one from context
+  const profile = propProfile || contextProfile;
 
   // Determine user type from either metadata or profile
   const isParent = 
@@ -60,6 +69,12 @@ export function UserMenu() {
           <Settings className="mr-2 h-4 w-4" />
           <span>Settings</span>
         </DropdownMenuItem>
+        {!isParent && onChangeAgeGroup && (
+          <DropdownMenuItem onClick={onChangeAgeGroup}>
+            <User className="mr-2 h-4 w-4" />
+            <span>Change Age Group</span>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut}>
           <LogOut className="mr-2 h-4 w-4" />
