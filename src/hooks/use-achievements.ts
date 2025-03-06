@@ -2,10 +2,15 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { Achievement } from '@/components/achievements/AchievementBadge';
+import { UseAchievementsResult } from '@/types/achievements';
+import { 
+  loadUserAchievements, 
+  saveAchievementUnlock, 
+  saveAchievementProgress 
+} from '@/services/achievement-service';
 
-export const useAchievements = () => {
+export const useAchievements = (): UseAchievementsResult => {
   const { profile } = useAuth();
   const { toast } = useToast();
   const [achievements, setAchievements] = useState<Achievement[]>([]);
@@ -21,88 +26,10 @@ export const useAchievements = () => {
   const loadAchievements = async () => {
     try {
       setIsLoading(true);
+      if (!profile?.id) return;
       
-      // First, load the achievement definitions
-      const defaultAchievements: Achievement[] = [
-        {
-          id: 'first-habit',
-          type: 'milestone',
-          title: 'Habit Starter',
-          description: 'Created your first habit',
-          icon: 'badge',
-          unlocked: false
-        },
-        {
-          id: 'habit-streak-3',
-          type: 'streak',
-          title: 'On a Roll',
-          description: 'Maintained a 3-day streak for any habit',
-          icon: 'award',
-          unlocked: false
-        },
-        {
-          id: 'habit-streak-7',
-          type: 'streak',
-          title: 'Week Warrior',
-          description: 'Maintained a 7-day streak for any habit',
-          icon: 'award',
-          unlocked: false
-        },
-        {
-          id: 'complete-3-tasks',
-          type: 'completion',
-          title: 'Task Master',
-          description: 'Completed 3 tasks in one day',
-          icon: 'target',
-          unlocked: false,
-          progress: 0,
-          maxProgress: 3
-        },
-        {
-          id: 'first-journal',
-          type: 'milestone',
-          title: 'Dear Diary',
-          description: 'Wrote your first journal entry',
-          icon: 'star',
-          unlocked: false
-        },
-        {
-          id: 'tutor-session',
-          type: 'learning',
-          title: 'Knowledge Seeker',
-          description: 'Had your first conversation with a tutor',
-          icon: 'trophy',
-          unlocked: false
-        }
-      ];
-      
-      // Then check which ones the user has unlocked
-      const { data: userAchievements, error } = await supabase
-        .from('user_achievements')
-        .select('achievement_id, unlocked_at, progress')
-        .eq('user_id', profile?.id);
-        
-      if (error) throw error;
-      
-      // Merge the data
-      const mergedAchievements = defaultAchievements.map(achievement => {
-        const userAchievement = userAchievements?.find(
-          ua => ua.achievement_id === achievement.id
-        );
-        
-        if (userAchievement) {
-          return {
-            ...achievement,
-            unlocked: !!userAchievement.unlocked_at,
-            unlockedAt: userAchievement.unlocked_at ? new Date(userAchievement.unlocked_at) : undefined,
-            progress: userAchievement.progress || achievement.progress
-          };
-        }
-        
-        return achievement;
-      });
-      
-      setAchievements(mergedAchievements);
+      const loadedAchievements = await loadUserAchievements(profile.id);
+      setAchievements(loadedAchievements);
     } catch (error) {
       console.error('Error loading achievements:', error);
     } finally {
@@ -113,7 +40,7 @@ export const useAchievements = () => {
   const unlockAchievement = async (achievementId: string) => {
     const achievement = achievements.find(a => a.id === achievementId);
     
-    if (!achievement || achievement.unlocked) return;
+    if (!achievement || achievement.unlocked || !profile?.id) return;
     
     try {
       // Update locally first for immediate feedback
@@ -126,15 +53,7 @@ export const useAchievements = () => {
       );
       
       // Then update in the database
-      const { error } = await supabase
-        .from('user_achievements')
-        .upsert({
-          user_id: profile?.id,
-          achievement_id: achievementId,
-          unlocked_at: new Date().toISOString()
-        });
-        
-      if (error) throw error;
+      await saveAchievementUnlock(profile.id, achievementId);
       
       // Show a toast notification
       toast({
@@ -160,7 +79,7 @@ export const useAchievements = () => {
   const updateAchievementProgress = async (achievementId: string, progress: number) => {
     const achievement = achievements.find(a => a.id === achievementId);
     
-    if (!achievement) return;
+    if (!achievement || !profile?.id) return;
     
     // Calculate if this should unlock the achievement
     const shouldUnlock = achievement.maxProgress && progress >= achievement.maxProgress;
@@ -181,16 +100,7 @@ export const useAchievements = () => {
       );
       
       // Then update in the database
-      const { error } = await supabase
-        .from('user_achievements')
-        .upsert({
-          user_id: profile?.id,
-          achievement_id: achievementId,
-          progress,
-          unlocked_at: shouldUnlock ? new Date().toISOString() : null
-        });
-        
-      if (error) throw error;
+      await saveAchievementProgress(profile.id, achievementId, progress, shouldUnlock);
       
       // Show a toast notification if unlocked
       if (shouldUnlock && !achievement.unlocked) {
