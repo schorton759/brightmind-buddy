@@ -31,7 +31,7 @@ export const useViewNavigation = () => {
           setCurrentView('parent-dashboard');
         } else if (profile.user_type === 'child') {
           if (profile.age_group) {
-            setCurrentView('dashboard');
+            setCurrentView('child-dashboard');
           } else {
             setCurrentView('age-select');
           }
@@ -58,14 +58,14 @@ export const useViewNavigation = () => {
     } else if (profile?.user_type === 'parent' || user?.user_metadata?.user_type === 'parent') {
       setCurrentView('parent-dashboard');
     } else {
-      setCurrentView('dashboard');
+      setCurrentView('child-dashboard');
     }
   };
 
   const handleViewChildDashboard = (childId: string, username: string) => {
     setViewingChildId(childId);
     setViewingChildUsername(username);
-    setCurrentView('dashboard');
+    setCurrentView('view-child');  // Changed from 'dashboard' to 'view-child'
   };
 
   return {

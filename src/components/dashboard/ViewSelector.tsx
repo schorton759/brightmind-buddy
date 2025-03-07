@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useAuth } from '@/context/AuthContext';
 import Dashboard from '@/components/Dashboard';
@@ -34,6 +35,9 @@ const ViewSelector = ({
     switch (currentView) {
       case 'child-dashboard':
         return <Dashboard ageGroup={profile?.age_group} username={profile?.username} onNavigate={handleNavigate} />;
+      case 'view-child':
+        // When viewing a child's dashboard, pass the child's username instead of the parent's
+        return <Dashboard ageGroup={profile?.age_group} username={viewingChildUsername || 'Child'} onNavigate={handleNavigate} />;
       case 'habits':
         return <HabitTracker />;
       case 'tasks':
