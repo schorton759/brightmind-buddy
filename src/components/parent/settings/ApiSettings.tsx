@@ -7,12 +7,14 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { CheckCircle } from 'lucide-react';
 
 const ApiSettings = () => {
   const { profile } = useAuth();
   const { toast } = useToast();
   const [openAIKey, setOpenAIKey] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [keySaved, setKeySaved] = useState(false);
   
   useEffect(() => {
     if (profile?.id) {
@@ -34,6 +36,7 @@ const ApiSettings = () => {
       
       if (data) {
         setOpenAIKey(data.openai_key || '');
+        setKeySaved(!!data.openai_key);
       }
     } catch (error) {
       console.error('Error fetching OpenAI key:', error);
@@ -52,6 +55,8 @@ const ApiSettings = () => {
         });
         
       if (error) throw error;
+      
+      setKeySaved(true);
       
       toast({
         title: "API Key Saved",
@@ -78,7 +83,10 @@ const ApiSettings = () => {
       <CardContent>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="openai-key">OpenAI API Key</Label>
+            <Label htmlFor="openai-key" className="flex items-center">
+              OpenAI API Key
+              {keySaved && <CheckCircle className="h-4 w-4 text-green-500 ml-2" />}
+            </Label>
             <div className="flex gap-2">
               <Input
                 id="openai-key"

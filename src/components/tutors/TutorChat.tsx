@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useAppAccess } from '@/hooks/use-app-access';
 import { useTutorChat } from '@/hooks/use-tutor-chat';
@@ -20,9 +20,16 @@ interface TutorChatProps {
 export function TutorChat({ subject, ageGroup }: TutorChatProps) {
   const { profile } = useAuth();
   const { hasAccess, isLoading: isCheckingAccess } = useAppAccess();
-  const { parentApiKey } = useParentApiKey();
+  const { parentApiKey, isLoading: isLoadingApiKey, refreshApiKey } = useParentApiKey();
   const navigate = useNavigate();
-  const [showApiKeyAlert, setShowApiKeyAlert] = useState(!parentApiKey);
+  const [showApiKeyAlert, setShowApiKeyAlert] = useState(false);
+  
+  // Use effect to set the API key alert state after loading
+  useEffect(() => {
+    if (!isLoadingApiKey) {
+      setShowApiKeyAlert(!parentApiKey);
+    }
+  }, [parentApiKey, isLoadingApiKey]);
   
   const { 
     messages, 
@@ -40,7 +47,13 @@ export function TutorChat({ subject, ageGroup }: TutorChatProps) {
     navigate('/parent-settings');
   };
 
-  if (isCheckingAccess) {
+  // Function to check for API key and refresh if needed
+  const checkAndRefreshApiKey = () => {
+    refreshApiKey();
+    setShowApiKeyAlert(!parentApiKey);
+  };
+
+  if (isCheckingAccess || isLoadingApiKey) {
     return (
       <div className="flex justify-center p-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -69,14 +82,22 @@ export function TutorChat({ subject, ageGroup }: TutorChatProps) {
           <AlertTitle>API Key Required</AlertTitle>
           <AlertDescription className="flex flex-col gap-2">
             <p>An OpenAI API key is required for the tutors to work. Please add your API key in the parent settings.</p>
-            <Button 
-              onClick={goToParentSettings} 
-              variant="outline" 
-              size="sm" 
-              className="self-start mt-2"
-            >
-              Go to Settings
-            </Button>
+            <div className="flex gap-2 mt-2">
+              <Button 
+                onClick={goToParentSettings} 
+                variant="outline" 
+                size="sm"
+              >
+                Go to Settings
+              </Button>
+              <Button 
+                onClick={checkAndRefreshApiKey} 
+                variant="secondary" 
+                size="sm"
+              >
+                Check Again
+              </Button>
+            </div>
           </AlertDescription>
         </Alert>
       )}
@@ -105,7 +126,7 @@ export function TutorChat({ subject, ageGroup }: TutorChatProps) {
           isProcessing={isProcessing}
           subject={subject}
           onSendMessage={sendMessage}
-          showApiKeyWarning={!parentApiKey}
+          showApiKeyWarning={showApiKeyAlert}
         />
       </div>
     </div>
