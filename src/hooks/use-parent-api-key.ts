@@ -2,9 +2,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 export function useParentApiKey() {
   const { profile } = useAuth();
+  const { toast } = useToast();
   const [parentApiKey, setParentApiKey] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<number>(0);
@@ -92,9 +94,28 @@ export function useParentApiKey() {
   // Expose a refresh method that components can call
   const refreshApiKey = useCallback(() => {
     if (profile?.id) {
-      fetchParentApiKey();
+      toast({
+        title: "Refreshing API key",
+        description: "Checking for updated API key..."
+      });
+      
+      fetchParentApiKey()
+        .then(() => {
+          toast({
+            title: "API key refreshed",
+            description: parentApiKey ? "API key found and updated." : "No API key found."
+          });
+        })
+        .catch((error) => {
+          console.error("Error refreshing API key:", error);
+          toast({
+            variant: "destructive",
+            title: "Refresh failed",
+            description: "Could not refresh API key. Please try again."
+          });
+        });
     }
-  }, [profile, fetchParentApiKey]);
+  }, [profile, fetchParentApiKey, parentApiKey, toast]);
 
   return { 
     parentApiKey, 

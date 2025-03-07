@@ -26,17 +26,17 @@ serve(async (req) => {
     const OPENAI_API_KEY = apiKey || Deno.env.get('OPENAI_API_KEY')
     
     // Validate the API key format (basic check)
-    if (!OPENAI_API_KEY || !OPENAI_API_KEY.startsWith('sk-')) {
-      console.log('Invalid OpenAI API key format for user:', userId);
+    if (!OPENAI_API_KEY) {
+      console.log('Missing OpenAI API key for user:', userId);
       return new Response(
-        JSON.stringify({ error: 'Invalid API key format. Please check your OpenAI API key in the parent settings.' }),
+        JSON.stringify({ error: 'Missing API key. Please add your OpenAI API key in the parent settings.' }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       )
     }
-
+    
     // Create system prompt based on subject and age group
     let systemPrompt = `You are a helpful ${subject} tutor for students in the ${ageGroup} age group. `
     
@@ -79,33 +79,45 @@ serve(async (req) => {
         }),
       })
 
-      const data = await response.json()
-      
-      // Check if there was an API error
-      if (data.error) {
-        console.error('OpenAI API error:', data.error)
-        const errorMessage = data.error.message || 'Error calling OpenAI API'
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('OpenAI API error:', errorData)
         
-        // Return a more specific error message for API key issues
-        if (errorMessage.includes('API key')) {
+        // Check for common API key errors
+        if (errorData.error && errorData.error.message) {
+          const errorMessage = errorData.error.message
+          
+          if (errorMessage.includes('API key')) {
+            return new Response(
+              JSON.stringify({ error: 'Invalid OpenAI API key. Please update your API key in the parent settings.' }),
+              { 
+                status: 401, 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              }
+            )
+          } else if (errorMessage.includes('rate limit')) {
+            return new Response(
+              JSON.stringify({ error: 'Rate limit exceeded. Please try again in a few moments.' }),
+              { 
+                status: 429, 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              }
+            )
+          }
+          
           return new Response(
-            JSON.stringify({ error: 'Invalid OpenAI API key. Please update your API key in the parent settings.' }),
+            JSON.stringify({ error: errorMessage }),
             { 
-              status: 401, 
+              status: 500, 
               headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             }
           )
         }
         
-        return new Response(
-          JSON.stringify({ error: errorMessage }),
-          { 
-            status: 500, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        )
+        throw new Error('Failed to connect to OpenAI API')
       }
 
+      const data = await response.json()
       const tutorResponse = data.choices[0].message.content
       console.log(`Successfully generated response for user ${userId}`)
       

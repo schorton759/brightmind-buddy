@@ -55,7 +55,7 @@ const ApiSettings = () => {
       return "API key should start with 'sk-'";
     }
     
-    if (key.length < 20) {
+    if (key.length < 30) {
       return "API key appears to be too short";
     }
     
