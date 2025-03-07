@@ -25,8 +25,16 @@ const ChildProfilesList = ({
     creatingCredentials,
     handleCreateCredentials,
     handleViewCredentials,
-    handleDeleteChild
+    handleDeleteChild,
+    fetchChildProfiles
   } = useChildProfiles(refreshTrigger);
+
+  // Handle the creation of credentials, ensuring UI updates
+  const handleChildCredentialsCreation = async (child) => {
+    await handleCreateCredentials(child);
+    // This will ensure the updated credentials are shown
+    fetchChildProfiles();
+  };
 
   if (loading) {
     return <LoadingChildProfiles />;
@@ -43,7 +51,7 @@ const ChildProfilesList = ({
           key={child.id}
           child={child}
           onDelete={handleDeleteChild}
-          onCreateCredentials={handleCreateCredentials}
+          onCreateCredentials={handleChildCredentialsCreation}
           onViewCredentials={handleViewCredentials}
           onViewDashboard={onViewChildDashboard}
           isCreatingCredentials={creatingCredentials}

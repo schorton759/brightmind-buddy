@@ -52,7 +52,19 @@ export const useChildProfiles = (refreshTrigger: number) => {
         
         if (profilesError) throw profilesError;
         
-        setChildProfiles(profiles || []);
+        // Get existing credentials from state to preserve them
+        const existingProfiles = [...childProfiles];
+        
+        // Create updated profiles, preserving credentials for existing profiles
+        const updatedProfiles = (profiles || []).map(profile => {
+          const existingProfile = existingProfiles.find(p => p.id === profile.id);
+          return {
+            ...profile,
+            credentials: existingProfile?.credentials || null
+          };
+        });
+        
+        setChildProfiles(updatedProfiles);
       } else {
         setChildProfiles([]);
       }
@@ -107,6 +119,8 @@ export const useChildProfiles = (refreshTrigger: number) => {
         title: "Credentials created",
         description: "Login credentials have been created for your child.",
       });
+      
+      return newCredentials;
     } catch (error: any) {
       console.error('Error creating credentials:', error.message);
       toast({
@@ -114,6 +128,7 @@ export const useChildProfiles = (refreshTrigger: number) => {
         title: "Failed to create credentials",
         description: error.message || "Please try again later.",
       });
+      throw error;
     } finally {
       setCreatingCredentials(false);
     }
@@ -163,6 +178,7 @@ export const useChildProfiles = (refreshTrigger: number) => {
     creatingCredentials,
     handleCreateCredentials,
     handleViewCredentials,
-    handleDeleteChild
+    handleDeleteChild,
+    fetchChildProfiles
   };
 };
