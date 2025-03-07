@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const ApiSettings = () => {
   const { profile } = useAuth();
@@ -15,6 +16,7 @@ const ApiSettings = () => {
   const [openAIKey, setOpenAIKey] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
   const [keySaved, setKeySaved] = useState(false);
+  const [keyError, setKeyError] = useState<string | null>(null);
   
   useEffect(() => {
     if (profile?.id) {
@@ -43,7 +45,38 @@ const ApiSettings = () => {
     }
   };
 
+  const validateApiKey = (key: string) => {
+    // Basic validation for OpenAI API key format
+    if (!key) {
+      return "API key is required";
+    }
+    
+    if (!key.startsWith('sk-')) {
+      return "API key should start with 'sk-'";
+    }
+    
+    if (key.length < 20) {
+      return "API key appears to be too short";
+    }
+    
+    return null;
+  };
+
   const handleSaveAPIKey = async () => {
+    // Validate the API key
+    const validationError = validateApiKey(openAIKey);
+    if (validationError) {
+      setKeyError(validationError);
+      toast({
+        variant: "destructive",
+        title: "Invalid API Key",
+        description: validationError
+      });
+      return;
+    }
+    
+    setKeyError(null);
+    
     try {
       setIsUpdating(true);
       
@@ -74,6 +107,11 @@ const ApiSettings = () => {
     }
   };
 
+  const handleKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setOpenAIKey(e.target.value);
+    setKeyError(null); // Clear error when user changes the input
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -93,12 +131,12 @@ const ApiSettings = () => {
                 type="password"
                 placeholder="sk-..."
                 value={openAIKey}
-                onChange={e => setOpenAIKey(e.target.value)}
-                className="flex-1"
+                onChange={handleKeyChange}
+                className={`flex-1 ${keyError ? 'border-red-500' : ''}`}
               />
               <Button 
                 onClick={handleSaveAPIKey}
-                disabled={isUpdating}
+                disabled={isUpdating || !openAIKey}
               >
                 {isUpdating ? (
                   <>
@@ -108,6 +146,14 @@ const ApiSettings = () => {
                 ) : 'Save'}
               </Button>
             </div>
+            
+            {keyError && (
+              <Alert variant="destructive" className="mt-2">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{keyError}</AlertDescription>
+              </Alert>
+            )}
+            
             <p className="text-xs text-muted-foreground mt-1">
               Used for the tutor feature. Your key will be stored securely.
               Get your key at <a href="https://platform.openai.com/api-keys" className="text-primary hover:underline" target="_blank" rel="noreferrer">platform.openai.com/api-keys</a>

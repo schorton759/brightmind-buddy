@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import "https://deno.land/x/xhr@0.1.0/mod.ts"
+import { corsHeaders } from "../_shared/cors.ts"
 
 interface TutorRequest {
   userId: string;
@@ -8,11 +9,6 @@ interface TutorRequest {
   subject: string;
   ageGroup: string;
   apiKey?: string; // Optional OpenAI API key provided by parent
-}
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
 serve(async (req) => {
@@ -24,13 +20,16 @@ serve(async (req) => {
   try {
     const { userId, message, subject, ageGroup, apiKey } = await req.json() as TutorRequest
     
+    console.log(`Processing ${subject} tutor request for user ${userId}, age group ${ageGroup}`)
+    
     // Determine which API key to use
     const OPENAI_API_KEY = apiKey || Deno.env.get('OPENAI_API_KEY')
     
-    if (!OPENAI_API_KEY) {
-      console.log('OpenAI API key missing for user:', userId);
+    // Validate the API key format (basic check)
+    if (!OPENAI_API_KEY || !OPENAI_API_KEY.startsWith('sk-')) {
+      console.log('Invalid OpenAI API key format for user:', userId);
       return new Response(
-        JSON.stringify({ error: 'OpenAI API key not configured. Please add it in the parent settings.' }),
+        JSON.stringify({ error: 'Invalid API key format. Please check your OpenAI API key in the parent settings.' }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -58,50 +57,77 @@ serve(async (req) => {
       You're encouraging, patient, and focus on making learning engaging and fun.`
     }
 
-    console.log(`Processing ${subject} tutor request for age group ${ageGroup}`)
+    // Log the request details (excluding API key)
+    console.log(`Sending ${subject} tutor request to OpenAI for user ${userId}`)
 
-    // Call OpenAI API
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: message }
-        ],
-        temperature: 0.7,
-        max_tokens: 1000,
-      }),
-    })
+    try {
+      // Call OpenAI API
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: message }
+          ],
+          temperature: 0.7,
+          max_tokens: 1000,
+        }),
+      })
 
-    const data = await response.json()
-    
-    if (data.error) {
-      console.error('OpenAI API error:', data.error)
+      const data = await response.json()
+      
+      // Check if there was an API error
+      if (data.error) {
+        console.error('OpenAI API error:', data.error)
+        const errorMessage = data.error.message || 'Error calling OpenAI API'
+        
+        // Return a more specific error message for API key issues
+        if (errorMessage.includes('API key')) {
+          return new Response(
+            JSON.stringify({ error: 'Invalid OpenAI API key. Please update your API key in the parent settings.' }),
+            { 
+              status: 401, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            }
+          )
+        }
+        
+        return new Response(
+          JSON.stringify({ error: errorMessage }),
+          { 
+            status: 500, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        )
+      }
+
+      const tutorResponse = data.choices[0].message.content
+      console.log(`Successfully generated response for user ${userId}`)
+      
       return new Response(
-        JSON.stringify({ error: data.error.message || 'Error calling OpenAI API' }),
+        JSON.stringify({ response: tutorResponse }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    } catch (apiError) {
+      console.error('Error calling OpenAI API:', apiError)
+      return new Response(
+        JSON.stringify({ error: 'Failed to connect to OpenAI. Please check your API key or try again later.' }),
         { 
           status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       )
     }
-
-    const tutorResponse = data.choices[0].message.content
-    
-    return new Response(
-      JSON.stringify({ response: tutorResponse }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
   } catch (error) {
     console.error('Error processing tutor request:', error)
     
     return new Response(
-      JSON.stringify({ error: error.message || 'Internal server error' }),
+      JSON.stringify({ error: 'Failed to process your request. Please try again.' }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

@@ -1,5 +1,5 @@
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAppAccess } from '@/hooks/use-app-access';
 import { useAuth } from '@/context/AuthContext';
@@ -26,9 +26,21 @@ export function useTutorChat({ subject, ageGroup, parentApiKey }: UseTutorChatPr
     scrollToBottom();
   }, [messages]);
 
+  // Reset error when API key changes
+  useEffect(() => {
+    if (parentApiKey) {
+      setError(null);
+    }
+  }, [parentApiKey]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  // Add function to reset errors
+  const resetError = useCallback(() => {
+    setError(null);
+  }, []);
 
   const sendMessage = async (message: string) => {
     if (!message.trim()) return;
@@ -46,6 +58,20 @@ export function useTutorChat({ subject, ageGroup, parentApiKey }: UseTutorChatPr
       return;
     }
     
+    // Check if API key is available
+    if (!parentApiKey) {
+      setError("OpenAI API key is missing. Please add it in the parent settings.");
+      
+      toast({
+        variant: "destructive",
+        title: "API Key Missing",
+        description: profile?.user_type === 'parent' 
+          ? "Please add your OpenAI API key in the settings." 
+          : "Ask your parent to add their OpenAI API key."
+      });
+      return;
+    }
+    
     // Add user message to chat
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -58,6 +84,8 @@ export function useTutorChat({ subject, ageGroup, parentApiKey }: UseTutorChatPr
     setIsProcessing(true);
     
     try {
+      console.log('Sending message to tutor service...');
+      
       // Call Supabase Edge Function
       const { data, error: functionError } = await supabase.functions.invoke('subject-tutor', {
         body: {
@@ -65,7 +93,7 @@ export function useTutorChat({ subject, ageGroup, parentApiKey }: UseTutorChatPr
           message: userMessage.content,
           subject,
           ageGroup,
-          apiKey: parentApiKey // Pass parent's API key if available
+          apiKey: parentApiKey // Pass parent's API key
         }
       });
       
@@ -109,6 +137,7 @@ export function useTutorChat({ subject, ageGroup, parentApiKey }: UseTutorChatPr
     isProcessing,
     sendMessage,
     messagesEndRef,
-    error
+    error,
+    resetError
   };
 }

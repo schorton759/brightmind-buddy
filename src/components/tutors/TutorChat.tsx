@@ -8,9 +8,10 @@ import { TutorChatMessage } from './TutorChatMessage';
 import { TutorChatInput } from './TutorChatInput';
 import { TutorEmptyState } from './TutorEmptyState';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 
 interface TutorChatProps {
   subject: 'math' | 'language' | 'science';
@@ -19,8 +20,9 @@ interface TutorChatProps {
 
 export function TutorChat({ subject, ageGroup }: TutorChatProps) {
   const { profile } = useAuth();
+  const { toast } = useToast();
   const { hasAccess, isLoading: isCheckingAccess } = useAppAccess();
-  const { parentApiKey, isLoading: isLoadingApiKey, refreshApiKey } = useParentApiKey();
+  const { parentApiKey, isLoading: isLoadingApiKey, refreshApiKey, lastRefreshed } = useParentApiKey();
   const navigate = useNavigate();
   const [showApiKeyAlert, setShowApiKeyAlert] = useState(false);
   
@@ -36,7 +38,8 @@ export function TutorChat({ subject, ageGroup }: TutorChatProps) {
     isProcessing, 
     sendMessage, 
     messagesEndRef,
-    error
+    error,
+    resetError
   } = useTutorChat({ 
     subject, 
     ageGroup, 
@@ -50,7 +53,47 @@ export function TutorChat({ subject, ageGroup }: TutorChatProps) {
   // Function to check for API key and refresh if needed
   const checkAndRefreshApiKey = () => {
     refreshApiKey();
-    setShowApiKeyAlert(!parentApiKey);
+    
+    // Add a toast to confirm the refresh action
+    toast({
+      title: "Checking API key",
+      description: "Refreshing connection to the API key..."
+    });
+    
+    // After a short delay, update the alert state based on the refreshed API key
+    setTimeout(() => {
+      setShowApiKeyAlert(!parentApiKey);
+      
+      if (parentApiKey) {
+        toast({
+          title: "API key found",
+          description: "Your API key is ready to use.",
+          variant: "default"
+        });
+      } else {
+        toast({
+          title: "No API key found",
+          description: "Please add an API key in parent settings.",
+          variant: "destructive"
+        });
+      }
+    }, 1000);
+  };
+
+  // Handle API key errors specifically
+  const handleRetryWithApiKey = () => {
+    // First refresh the API key
+    refreshApiKey();
+    
+    // Then reset any errors in the chat
+    if (resetError) {
+      resetError();
+    }
+    
+    toast({
+      title: "Retrying connection",
+      description: "Reconnecting to the tutor service..."
+    });
   };
 
   if (isCheckingAccess || isLoadingApiKey) {
@@ -94,7 +137,9 @@ export function TutorChat({ subject, ageGroup }: TutorChatProps) {
                 onClick={checkAndRefreshApiKey} 
                 variant="secondary" 
                 size="sm"
+                className="flex items-center gap-1"
               >
+                <RefreshCw className="h-3 w-3" />
                 Check Again
               </Button>
             </div>
@@ -106,7 +151,31 @@ export function TutorChat({ subject, ageGroup }: TutorChatProps) {
         <Alert variant="destructive" className="m-4">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription className="flex flex-col gap-2">
+            <p>{error}</p>
+            {error.includes('API key') && (
+              <div className="flex gap-2 mt-2">
+                {profile?.user_type === 'parent' && (
+                  <Button 
+                    onClick={goToParentSettings} 
+                    variant="outline" 
+                    size="sm"
+                  >
+                    Update API Key
+                  </Button>
+                )}
+                <Button 
+                  onClick={handleRetryWithApiKey} 
+                  variant="secondary" 
+                  size="sm"
+                  className="flex items-center gap-1"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                  Retry Connection
+                </Button>
+              </div>
+            )}
+          </AlertDescription>
         </Alert>
       )}
 
