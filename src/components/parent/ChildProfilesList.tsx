@@ -31,9 +31,16 @@ const ChildProfilesList = ({
 
   // Handle the creation of credentials, ensuring UI updates
   const handleChildCredentialsCreation = async (child) => {
-    await handleCreateCredentials(child);
-    // This will ensure the updated credentials are shown
-    fetchChildProfiles();
+    try {
+      const createdCredentials = await handleCreateCredentials(child);
+      console.log("Credentials created successfully:", createdCredentials);
+      
+      // The UI should already be updated in the handleCreateCredentials function,
+      // but we'll do an additional fetch to be sure
+      fetchChildProfiles();
+    } catch (error) {
+      console.error("Error creating credentials:", error);
+    }
   };
 
   if (loading) {

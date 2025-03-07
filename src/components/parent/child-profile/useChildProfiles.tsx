@@ -104,7 +104,7 @@ export const useChildProfiles = (refreshTrigger: number) => {
       
       setCredentials(newCredentials);
       
-      // Update the child profile with credentials
+      // Update the child profile with credentials immediately in local state
       setChildProfiles(prev => 
         prev.map(p => 
           p.id === child.id 
